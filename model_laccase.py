@@ -390,7 +390,7 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes, add_hetatm):
                                   + ": "*4 + "\n")
                 end_aln_posit = data_dict[element][1].index("*")
                 aln_pir.write("{0}{1}{2}\n".format(
-                    data_dict[element][1][0, end_aln_posit],
+                    data_dict[element][1][0:end_aln_posit],
                     het_atm, data_dict[element][1][end_aln_posit:]))
     except IOError:
         sys.exit("Error cannot open {0}".format())
