@@ -66,6 +66,7 @@ class ModelingConfig:
             self.writeconfig()
             self.readconfig()
 
+
     def readconfig(self):
         """Read config data
         """
@@ -77,6 +78,14 @@ class ModelingConfig:
         # Get parameter value
         self.hdict["download_url"] = self.config.get("PDB_config",
                                                      "download_url")
+        self.hdict["clustalo"] = self.config.get('Alignment_config',
+                                                 'clustalo')
+        self.hdict["clustalw2"] = self.config.get('Alignment_config',
+                                                 'clustalw2')
+        self.hdict["mafft"] = self.config.get('Alignment_config',
+                                                 'mafft')
+        self.hdict["muscle"] = self.config.get('Alignment_config',
+                                                 'muscle')
         self.hdict["t_coffee"] = self.config.get('Alignment_config',
                                                  't_coffee')
 
@@ -88,6 +97,19 @@ class ModelingConfig:
         self.config.set("PDB_config", "download_url",
                         "http://www.rcsb.org/pdb/files/")
         self.config.add_section('Alignment_config')
+        self.config.set('Alignment_config', 'clustalo',
+                        "%path_soft{0}clustalo -i %multifasta -o %output "
+                        "--threads=%proc --auto -t Protein "
+                        "--outfmt=fa".format(os.sep))
+        self.config.set('Alignment_config', 'clustalw2',
+                        "%path_soft{0}clustalw2 -INFILE=%multifasta "
+                        "-OUTPUT=PIR -OUTFILE=%output".format(os.sep))
+        self.config.set('Alignment_config', 'mafft',
+                        "%path_soft{0}mafft --auto --thread %proc "
+                        "%multifasta > %output".format(os.sep))
+        self.config.set('Alignment_config', 'muscle',
+                        "%path_soft{0}muscle -in %multifasta "
+                        "-out %output".format(os.sep))
         self.config.set('Alignment_config', 't_coffee',
                         "%path_soft{0}t_coffee %multifasta "
                         "-outfile %output -output pir_aln -mode 3dcoffee "
@@ -141,19 +163,30 @@ def get_arguments():
                                      "model_laccase.py ")
     parser.set_defaults(pdb_dir=local_path, results=local_path,
                         number_model=8, thread=detect_cpus(),
-                        path_t_coffee=local_path, model_quality="normal")
+                        path_t_coffee=local_path, model_quality="normal",
+                        alignment_software="t_coffee", path_alignment="./",
+                        list_operations=["modeling", "profile"],
+                        add_heteroatom=0)
     parser.add_argument("-l", "--list_operations", type=str, nargs='+',
-                        choices=["modeling", "profile"], required=True,
+                        choices=["modeling", "profile", "verification"],
                         help='Select operations.')
     parser.add_argument('-f', '--multifasta_file', type=isfile,
                         help='Fasta sequence.')
-    parser.add_argument('-a', '--alignment_file', type=isfile,
+    parser.add_argument('-i', '--alignment_file', type=isfile,
                         help='Alignment file in PIR format.')
+    parser.add_argument('-a', '--alignment_software', type=str,
+                        choices=["clustalw2", "clustalo", "mafft", "muscle",
+                                 "t_coffee"],
+                        help="Indicate the software that should be used to "
+                        "align sequences.")
+    parser.add_argument('-ht', '--add_heteroatom', type=int,
+                        help="Indicate the number of hetero-atom residue that "
+                        "should be added to the alignment software.")
     parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
                         help="List of pdb files or codes.")
-    parser.add_argument('-m', '--model_name', type=str,
+    parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize.')
-    parser.add_argument('-g', '--path_t_coffee', type=isdir,
+    parser.add_argument('-g', '--path_alignment', type=isdir,
                         help='Path to t_coffee software.')
     parser.add_argument('-n', '--number_model', type=int,
                         help='Number of model to produce.')
@@ -170,7 +203,7 @@ def get_arguments():
     parser.add_argument('-t', '--thread', type=int, help='Number of thread.')
     parser.add_argument('-c', '--config', type=isfile,
                         help='Path to configuration file.')
-    return parser.parse_args()
+    return parser.parse_args(), parser
 
 
 def detect_cpus():
@@ -213,6 +246,19 @@ def download_pdb(conf_data, pdb, results):
     return outfilename
 
 
+# def get_pdb_code(pdb_file):
+#     """Extract the PDB code from the header
+#     """
+#     pdb_code = ""
+#     try:
+#         with open(pdb_file, "rt") as pdb:
+#             pdb_code = pdb.next().split()[4]
+#     except IOError:
+#         sys.exit("Error cannot open {0}".format(pdb_file))
+#     assert(len(pdb_code) == 4)
+#     return pdb_code
+
+
 def get_pdb(conf_data, pdb_list, results):
     """
     """
@@ -224,7 +270,8 @@ def get_pdb(conf_data, pdb_list, results):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
         else:
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            pdb_files += [download_pdb(conf_data, os.path.basename(pdb).split(".")[0],
+            pdb_files += [download_pdb(conf_data,
+                                       os.path.basename(pdb).split(".")[0],
                                        results)]
     return pdb_codes, pdb_files
 
@@ -250,6 +297,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
                   output, thread):
     """Set the software command
     """
+    print(path_soft)
     print(build_command, file=sys.stderr)
     build_command = build_command.replace('%path_soft', path_soft)
     if thread:
@@ -311,47 +359,56 @@ def check_format(aln_data, pdb_codes):
     return status, data
 
 
-def adjust_format(aln_pir_file, data_dict, pdb_codes):
-    """
+def adjust_format(aln_pir_file, data_dict, pdb_codes, add_hetatm):
+    """Correct pir format and add heteroatom in the alignment
     """
     output_file = (os.path.dirname(aln_pir_file) + os.sep +
                    os.path.basename(aln_pir_file).split(".")[0]
                    + "_corrected.pir")
+    het_atm = ""
+    structure_present = False
+    if add_hetatm > 0:
+        het_atm = "." * add_hetatm
     try:
         with open(output_file, "wt") as aln_pir:
             for element in data_dict:
                 aln_pir.write(">P1;{0}\n".format(element))
-                if data_dict[element][0]:
+                if data_dict[element][0] and not add_hetatm:
                     aln_pir.write(data_dict[element][0])
                 else:
+                    # Write midline characteristic
                     type_data = "sequence"
                     if element in pdb_codes:
                         type_data = "structureX"
+                        structure_present = True
                     sequence = data_dict[element][1].replace("-", "")
                     sequence = sequence.replace("\n", "")
                     sequence = sequence.replace("*", "")
                     aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
                                     type_data, element,
-                                    len(sequence))
+                                    len(sequence) + add_hetatm)
                                   + ": "*4 + "\n")
-#                aln_pir.write("{0}\n".format("\n".join(
-#                                textwrap.wrap(data_dict[element][1], 50))))
-                aln_pir.write("{0}\n".format(data_dict[element][1]))
+                end_aln_posit = data_dict[element][1].index("*")
+                aln_pir.write("{0}{1}{2}\n".format(
+                    data_dict[element][1][0, end_aln_posit],
+                    het_atm, data_dict[element][1][end_aln_posit:]))
     except IOError:
         sys.exit("Error cannot open {0}".format())
+    assert(structure_present)
     return output_file
 
 
-def check_pir(aln_pir_file, pdb_codes):
-    """
+def check_pir(aln_pir_file, pdb_codes, add_hetam):
+    """Run checking of pir alignment file
     """
     try:
         with open(aln_pir_file, "rt") as aln_pir:
             aln_data = aln_pir.readlines()
         status, data_dict = check_format(aln_data, pdb_codes)
-        if not status:
+        if not status or add_hetam > 0:
             print("Try to correct pir alignment format.", file=sys.stderr)
-            aln_pir_file = adjust_format(aln_pir_file, data_dict, pdb_codes)
+            aln_pir_file = adjust_format(aln_pir_file, data_dict, pdb_codes,
+                                         add_hetam)
     except AssertionError:
         sys.exit("All PDB structures must be referenced in the alignment.")
     except IOError:
@@ -359,16 +416,71 @@ def check_pir(aln_pir_file, pdb_codes):
     return aln_pir_file
 
 
-def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files, path_soft,
-                  thread, results):
+def get_fasta_data(aln_fasta_file):
+    """Extract fasta data
+    """
+    head = ""
+    data_fasta = {}
+    regex_head = re.compile(r"^>([\w-]+)")
+    regex_sequence = re.compile(r"([\w*-]+\n)")
+    try:
+        with open(aln_fasta_file, "rt") as aln_fasta:
+            for i in aln_fasta:
+                match_head = regex_head.match(i)
+                match_sequence = regex_sequence.match(i)
+                if match_head:
+                    head = match_head.group(1)
+                    data_fasta[head] = ""
+                elif match_sequence:
+                    data_fasta[head] += match_sequence.group(1)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(aln_fasta_file))
+    return data_fasta
+
+
+def write_pir_file(aln_pir_file, data_fasta, pdb_codes, add_hetatm):
+    """Write new pir alignment
+    """
+    hetatm = ""
+    if add_hetatm > 0:
+        hetatm = "." * add_hetatm
+    try:
+        with open(aln_pir_file, "wt") as aln_pir:
+            for element in data_fasta:
+                aln_pir.write(">P1;{0}\n".format(element))
+                type_data = "sequence"
+                if element in pdb_codes:
+                    type_data = "structureX"
+                sequence = data_fasta[element].replace("-", "")
+                sequence = sequence.replace("\n", "")
+                aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
+                                type_data, element,
+                                len(sequence) + add_hetatm)
+                                + ": "*4 + "\n")
+                aln_pir.write("{0}{1}*\n".format(data_fasta[element], hetatm))
+    except IOError:
+        sys.exit("Error cannot open {0}".format(aln_pir_file))
+
+
+def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
+                  alignment_software, path_soft, add_hetatm, thread, results):
     """Compute alignment and adjust pir information
     """
-    aln_pir_file = results + "t_coffee_aln.pir"
+    aln_pir_file = results + alignment_software + "_aln.pir"
     # compute
-    run_command(replace_motif(conf_data.hdict["t_coffee"], path_soft,
-                              multifasta_file, pdb_files, aln_pir_file,
-                              thread))
-    aln_pir_file = check_pir(aln_pir_file, pdb_codes)
+    if alignment_software in ("t_coffee", "clustalw2"):
+        run_command(replace_motif(conf_data.hdict[alignment_software],
+                                  path_soft, multifasta_file, pdb_files,
+                                  aln_pir_file, thread))
+    else:
+        aln_fasta_file = results + alignment_software + "_aln.fasta"
+        run_command(replace_motif(conf_data.hdict[alignment_software],
+                                  path_soft, multifasta_file, pdb_files,
+                                  aln_fasta_file, thread))
+        data_fasta = get_fasta_data(aln_fasta_file)
+        write_pir_file(aln_pir_file, data_fasta, pdb_codes, add_hetatm)
+    if alignment_software in ("t_coffee", "clustalw2"):
+        aln_pir_file = check_pir(aln_pir_file, pdb_codes, add_hetatm)
     return aln_pir_file
 
 
@@ -389,25 +501,8 @@ def get_model(aln_file, pdb_codes):
     return model
 
 
-# def run_alignment(env, alignment_file, model_name, pdb_codes, results):
-#    """
-#    """
-#    output = '{0}modeller_{1}.pir'.format(results, model_name)
-#    print(output)
-#    # Load Alignment env
-#    aln = alignment(env)
-#    mdl = model(env, file=pdb_codes[0], model_segment=('FIRST:A', 'LAST:A'))
-#    aln.append_model(mdl, align_codes=pdb_codes[0],
-#                     atom_files=pdb_codes[0] + '.pdb')
-#
-#    aln.append(file=alignment_file, align_codes=model_name)
-#    aln.align2d()
-#    aln.write(file=output, alignment_format='PIR')
-#    return output
-
-
 def get_environment(pdb_files):
-    """
+    """Set Modeller environment parameters
     """
     env = environ()
     # Set PDB directory
@@ -420,7 +515,7 @@ def get_environment(pdb_files):
 
 
 def get_parallel(thread):
-    """
+    """Start modeling slave
     """
     job_worker = job()
     for i in xrange(0, thread):
@@ -430,16 +525,17 @@ def get_parallel(thread):
 
 def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
                    model_name, model_quality, number_model):
-    """
+    """Define modeling parameters and start modeling 
     """
     # Compute models
     atm = automodel(env, alnfile=alignment_file,
                     knowns=pdb_codes, sequence=model_name,
                     assess_methods=[assess.GA341, assess.DOPE,
                                     assess.normalized_dope])
-    #
+    # Indicate number of template and model
     atm.starting_model = len(pdb_codes)
     atm.ending_model = int(number_model)
+    # Start slave
     atm.use_parallel_job(job_worker)
     if model_quality == "fast":
         print("Start fast modeling")
@@ -462,7 +558,7 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
 
 
 def barplot(data, label, result_data):
-    """
+    """Barplot general method
     """
     plt.xlabel(label[0])
     plt.ylabel(label[1])
@@ -482,7 +578,9 @@ def summary_data(data, results):
             writer.writerow(["molpdf", "DOPE score", "Normalized DOPE score",
                              "GA341 score"])
             for i in xrange(len(data)):
-                writer.writerow([data[i]["molpdf"], data[i]["DOPE score"],
+                writer.writerow([(data[i]["name"].split(".")[0]
+                                  + "_{0}".format(i + 1)), data[i]["molpdf"],
+                                 data[i]["DOPE score"],
                                  data[i]["Normalized DOPE score"],
                                  data[i]["GA341 score"][0]])
     except IOError:
@@ -490,17 +588,17 @@ def summary_data(data, results):
 
 
 def save_general_data(atm, results):
-    """
+    """Write general parameters of the produced models
     """
     # Get converged models
     ok_models = filter(lambda x: x['failure'] is None, atm.outputs)
     # Rank the models by molpdf score
     ok_models.sort(lambda a, b: cmp(a["DOPE score"], b["DOPE score"]))
-    # Barplot
+    # Barplot Dope score of each ok models
     barplot([i["DOPE score"] for i in ok_models], ["Model", "Dope score",
                                                     "Dope score per model"],
              results + "dope_per_model.svg")
-    # Write summary
+    # Write data summary
     summary_data(ok_models, results)
 
 
@@ -527,7 +625,7 @@ def get_profile(profile_file, seq):
 
 
 def compute_profile(data):
-    """
+    """Compute the profile of each model
     """
     env = get_environment([data[0]])
     aln = alignment(env, file=data[2])
@@ -543,7 +641,7 @@ def compute_profile(data):
 
 
 def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
-    """
+    """Compute and load the profile of each model
     """
     list_run = [[ pdb_files[i], (results + pdb_codes[i] + '.profile'),
                  alignment_file]
@@ -555,7 +653,7 @@ def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
 
 
 def plot_DOPE_profile(list_template, list_model, list_model_files, results):
-    """
+    """Plot the dope result for each residue of each model
     """
     # Get color map
     color_map = cm.get_cmap('gist_rainbow')
@@ -567,8 +665,10 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, results):
     ax1.set_xlabel('Alignment position')
     ax1.set_ylabel('DOPE per-residue score')
     ax1.set_xlim(0, len(list_model[0]))
+    # Plot templates
     for template in list_template:
         ax1.plot(template, color="green", linewidth=1, label='Template')
+    # Plot models
     for i in xrange(len(list_model)):
         ax1.plot(list_model[i], color=colors[i], linewidth=1, label='Model')
     ax1.legend(["template"] + [(list_model_files[i].split(".")[0]
@@ -594,7 +694,7 @@ def main():
     """
     Main program function
     """
-    args = get_arguments()
+    args, parser = get_arguments()
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
     # Prepare modeling
@@ -603,15 +703,18 @@ def main():
     if args.multifasta_file and not args.alignment_file:
         args.alignment_file = run_alignment(conf_data, args.multifasta_file,
                                             pdb_codes, pdb_files,
-                                            args.path_t_coffee,
+                                            args.alignment_software,
+                                            args.path_alignment,
+                                            args.add_heteroatom,
                                             args.thread, args.results)
     elif args.multifasta_file and args.alignment_file:
         sys.exit("You have provided an alignment and the multifasta "
                  "which indicates to compute the alignment. "
                  "Please choose only one.")
     elif not args.multifasta_file and not args.alignment_file:
-        sys.exit("You must provide an alignment or a multifasta sequence "
-                 "to continue...")
+        print("You must provide an alignment or a multifasta sequence "
+              "to continue...", file=sys.stderr)
+        sys.exit(parser.print_help())
     if not args.model_name:
         args.model_name = get_model(args.alignment_file, pdb_codes)
     if MODELLER:
@@ -620,7 +723,6 @@ def main():
         log.verbose()
         # Load environment
         env = get_environment(pdb_files)
-        # TODO PATCH
     if MODELLER and "modeling" in args.list_operations:
         # Use several CPUs in a parallel job on this machine
         job_worker = get_parallel(int(args.thread))
@@ -633,7 +735,6 @@ def main():
                       for i in xrange(1, args.number_model + 1)]
         list_model_files = [i + ".pdb" for i in list_model]
         # Load alignment
-#         aln = alignment(env, file=args.alignment_file)
         list_template = load_profiles(env, pdb_files, pdb_codes,
                                       args.alignment_file, args.thread,
                                       args.results)
