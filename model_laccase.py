@@ -595,9 +595,10 @@ def save_general_data(atm, results):
     # Rank the models by molpdf score
     ok_models.sort(lambda a, b: cmp(a["DOPE score"], b["DOPE score"]))
     # Barplot Dope score of each ok models
-    barplot([i["DOPE score"] for i in ok_models], ["Model", "Dope score",
-                                                    "Dope score per model"],
-             results + "dope_per_model.svg")
+    if MATPLOTLIB:
+        barplot([i["DOPE score"] for i in ok_models],
+                ["Model", "Dope score", "Dope score per model"],
+                results + "dope_per_model.svg")
     # Write data summary
     summary_data(ok_models, results)
 
