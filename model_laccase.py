@@ -469,7 +469,8 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                   alignment_software, path_soft, add_hetatm, thread, results):
     """Compute alignment and adjust pir information
     """
-    aln_pir_file = results + alignment_software + "_aln.pir"
+    aln_pir_file = (results + alignment_software + "_" +
+                    str(os.getpid()) + "_aln.pir")
     if not multifasta_file.endswith("fasta"):
         print("Warning :  the sequence are supposed to be "
               "in fasta format", file=sys.stderr)
