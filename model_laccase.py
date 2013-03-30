@@ -10,7 +10,6 @@
 #    GNU General Public License for more details.
 #    A copy of the GNU General Public License is available at
 #    http://www.gnu.org/licenses/gpl-3.0.html
-from IPython.utils.io import stderr
 
 """Run modelling."""
 
