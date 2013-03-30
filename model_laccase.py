@@ -488,6 +488,7 @@ def get_model(aln_file, pdb_codes):
     """
     """
     regex = re.compile("^>\w+;([\w-]+)")
+    model = None
     try:
         with open(aln_file) as aln:
             for line in aln:
@@ -496,8 +497,11 @@ def get_model(aln_file, pdb_codes):
                     if match.group(1) not in pdb_codes:
                         model = match.group(1)
                         break
+        assert(model)
     except IOError:
         sys.exit("Error cannot open {0}".format(aln_file))
+    except AssertionError:
+        sys.exit("Model name not found")
     return model
 
 
