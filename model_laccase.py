@@ -10,6 +10,7 @@
 #    GNU General Public License for more details.
 #    A copy of the GNU General Public License is available at
 #    http://www.gnu.org/licenses/gpl-3.0.html
+from IPython.utils.io import stderr
 
 """Run modelling."""
 
@@ -402,6 +403,9 @@ def check_pir(aln_pir_file, pdb_codes, add_hetam):
     """Run checking of pir alignment file
     """
     try:
+        if not aln_pir_file.endswith('.pir'):
+            print("Warning : The alignment file is expected "
+                  "to be in pir format", file=sys.stderr)
         with open(aln_pir_file, "rt") as aln_pir:
             aln_data = aln_pir.readlines()
         status, data_dict = check_format(aln_data, pdb_codes)
@@ -467,6 +471,9 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
     """Compute alignment and adjust pir information
     """
     aln_pir_file = results + alignment_software + "_aln.pir"
+    if not multifasta_file.endswith("fasta"):
+        print("Warning :  the sequence are supposed to be "
+              "in fasta format", file=sys.stderr)
     # compute
     if alignment_software in ("t_coffee", "clustalw2"):
         run_command(replace_motif(conf_data.hdict[alignment_software],
