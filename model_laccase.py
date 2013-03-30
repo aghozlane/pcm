@@ -582,7 +582,7 @@ def barplot(data, label, result_data):
 def summary_data(data, results):
     """
     """
-    output_file = results + "modeller_summary.csv"
+    output_file = results + "modeller_summary_{0}.csv".format(os.getpid())
     try:
         with open(output_file, "wt") as out:
             writer = csv.writer(out, delimiter='\t')
@@ -609,7 +609,7 @@ def save_general_data(atm, results):
     if MATPLOTLIB:
         barplot([i["DOPE score"] for i in ok_models],
                 ["Model", "Dope score", "Dope score per model"],
-                results + "dope_per_model.svg")
+                results + "dope_per_model_{0}.svg".format(os.getpid()))
     # Write data summary
     summary_data(ok_models, results)
 
@@ -688,7 +688,7 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, results):
                                for i in xrange(len(list_model_files))],
                loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(results + os.sep + 'dope_profile.svg')
+    plt.savefig(results + os.sep + 'dope_profile_{0}.svg'.format(os.getpid()))
 
 
 def run_verification(conf_data, structure_check):
