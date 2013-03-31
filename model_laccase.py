@@ -480,7 +480,8 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                                   path_soft, multifasta_file, pdb_files,
                                   aln_pir_file, thread))
     else:
-        aln_fasta_file = results + alignment_software + "_aln.fasta"
+        aln_fasta_file = (results + alignment_software + "_"
+                          + str(os.getpid()) + "_aln.fasta")
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
                                   aln_fasta_file, thread))
