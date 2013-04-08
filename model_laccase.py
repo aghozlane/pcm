@@ -280,7 +280,6 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
                   output, thread):
     """Set the software command
     """
-    print(path_soft)
     print(build_command, file=sys.stderr)
     build_command = build_command.replace('%path_soft', path_soft)
     if thread:
@@ -558,7 +557,6 @@ def histplot(data, label, result_data):
     plt.xlabel(label[0])
     plt.ylabel(label[1])
     plt.title(label[2])
-    # plt.hist(range(0, len(data)), data)
     plt.hist(data)
     plt.savefig(result_data)
     plt.clf()
@@ -640,10 +638,12 @@ def get_session_id(alignment_file):
     """Get the id of previous calculation
     """
     session_id = os.getpid()
-    regex = re.compile("[\w-]+_([0-9]+)_aln.pir")
-    match = regex.match(alignment_file)
+    regex = re.compile("[\w-]+_([0-9]+)_aln.*\.pir")
+    match = regex.match(os.path.basename(alignment_file))
     if match:
         session_id = match.group(1)
+    else:
+        sys.exit("{0} not found".format(alignment_file))
     return session_id
 
 
@@ -660,7 +660,7 @@ def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
 
 
 def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
-                      results):
+                      pdb_codes, results):
     """Plot the dope result for each residue of each model
     """
     # Get color map
@@ -675,16 +675,26 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
     ax1.set_xlim(0, len(list_model[0]))
     # Plot templates
     for template in list_template:
-        ax1.plot(template, color="green", linewidth=1, label='Template')
+        temp_col = ax1.plot(template, color="green", linewidth=1,
+                            label='Template')
     # Plot models
     for i in xrange(len(list_model)):
-        ax1.plot(list_model[i], color=colors[i], linewidth=1, label='Model')
-#     ax1.legend(["template"] + [(list_model_files[i].split(".")[0]
-#                                 + "_{0}".format(i + 1))
-#                                for i in xrange(len(list_model_files))],
-#                loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
-#                ncol=3, fancybox=True, shadow=True)
+        model_col = ax1.plot(list_model[i], color=colors[i], linewidth=1,
+                             label='Model')
+    if(len(list_model_files) <= 10):
+        ax1.legend(["template"] + [(os.path.basename(list_model_files[i]).split(".")[0]
+                                    + "_{0}".format(i + 1))
+                                   for i in xrange(len(list_model_files))],
+                   loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
+                   ncol=3, fancybox=True, shadow=True)
+    else:
+        ax1.legend([temp_col[0], model_col[-1]], pdb_codes +
+                   [os.path.basename(list_model_files[0]).split(".")[0] + "_*"],
+                   loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
+                   ncol=3, fancybox=True, shadow=True)
+
     plt.savefig(results + os.sep + 'dope_profile_{0}.svg'.format(sessionid))
+    plt.clf()
 
 
 def load_summary(summary_file):
@@ -697,7 +707,7 @@ def load_summary(summary_file):
             # Pass head
             summary_reader.next()
             for line in summary_reader:
-                if(len(line) == 4):
+                if(len(line) == 5):
                     summary_data[line[0]] = [float(val) for val in line[1:]]
     except ValueError:
         sys.exit("Error cannot convert the element of {0}"
@@ -761,7 +771,7 @@ def main():
     if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)]
-        list_model_files = [i + ".pdb" for i in list_model]
+        list_model_files = [args.results + i + ".pdb" for i in list_model]
         sessionid = get_session_id(args.alignment_file)
         summary_file = (args.results + "modeller_summary_"
                         + str(sessionid) + ".csv")
@@ -774,13 +784,15 @@ def main():
                                    args.results)
         # Plot DOPE profile
         plot_DOPE_profile(list_template, list_model, list_model_files,
-                          sessionid, args.results)
+                          sessionid, pdb_codes, args.results)
         if (os.path.isfile(summary_file)):
             summary_data = load_summary(summary_file)
-            histplot([summary_data[model]["DOPE score"]
+            histplot([summary_data[model][1]
                       for model in summary_data],
                      ["Dope score", "Frequency", "Dope score histogram"],
                      args.results + "dope_per_model_{0}.svg".format(sessionid))
+        else:
+            sys.exit("{0} does not exist".format(summary_file))
     if args.structure_check:
         run_verification(None, args.structure_check)
 
