@@ -45,7 +45,7 @@ except ImportError:
       "The statistic measures won't be drawn.", file=sys.stderr)
 
 class ModelingConfig:
-    """Configure alignment and phylogeny.
+    """Configure alignment.
     """
 
     def __init__(self, config_file, results):
@@ -76,8 +76,6 @@ class ModelingConfig:
         # Read config file
         self.config.read(self.phyconfig_file)
         # Get parameter value
-        self.hdict["download_url"] = self.config.get("PDB_config",
-                                                     "download_url")
         self.hdict["clustalo"] = self.config.get('Alignment_config',
                                                  'clustalo')
         self.hdict["clustalw2"] = self.config.get('Alignment_config',
@@ -93,9 +91,6 @@ class ModelingConfig:
     def writeconfig(self):
         """Write modeling config
         """
-        self.config.add_section("PDB_config")
-        self.config.set("PDB_config", "download_url",
-                        "http://www.rcsb.org/pdb/files/")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_soft{0}clustalo -i %multifasta -o %output "
@@ -164,7 +159,8 @@ def get_arguments():
     parser.set_defaults(pdb_dir=local_path, results=local_path,
                         number_model=8, thread=detect_cpus(),
                         path_t_coffee=local_path, model_quality="normal",
-                        alignment_software="t_coffee", path_alignment="./",
+                        alignment_software="t_coffee",
+                        path_alignment=local_path,
                         list_operations=["modeling", "profile"],
                         add_heteroatom=0)
     parser.add_argument("-l", "--list_operations", type=str, nargs='+',
@@ -244,19 +240,6 @@ def download_pdb(conf_data, pdb, results):
         print("Something went wrong with %s" % outfilename,
               file=sys.stderr)
     return outfilename
-
-
-# def get_pdb_code(pdb_file):
-#     """Extract the PDB code from the header
-#     """
-#     pdb_code = ""
-#     try:
-#         with open(pdb_file, "rt") as pdb:
-#             pdb_code = pdb.next().split()[4]
-#     except IOError:
-#         sys.exit("Error cannot open {0}".format(pdb_file))
-#     assert(len(pdb_code) == 4)
-#     return pdb_code
 
 
 def get_pdb(conf_data, pdb_list, results):
@@ -569,13 +552,14 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
     return atm
 
 
-def barplot(data, label, result_data):
+def histplot(data, label, result_data):
     """Barplot general method
     """
     plt.xlabel(label[0])
     plt.ylabel(label[1])
     plt.title(label[2])
-    plt.bar(range(0, len(data)), data)
+    # plt.hist(range(0, len(data)), data)
+    plt.hist(data)
     plt.savefig(result_data)
     plt.clf()
 
@@ -587,8 +571,8 @@ def summary_data(data, results):
     try:
         with open(output_file, "wt") as out:
             writer = csv.writer(out, delimiter='\t')
-            writer.writerow(["molpdf", "DOPE score", "Normalized DOPE score",
-                             "GA341 score"])
+            writer.writerow(["Model", "molpdf", "DOPE score",
+                             "Normalized DOPE score", "GA341 score"])
             for i in xrange(len(data)):
                 writer.writerow([(data[i]["name"].split(".")[0]
                                   + "_{0}".format(i + 1)), data[i]["molpdf"],
@@ -608,8 +592,8 @@ def save_general_data(atm, results):
     ok_models.sort(lambda a, b: cmp(a["DOPE score"], b["DOPE score"]))
     # Barplot Dope score of each ok models
     if MATPLOTLIB:
-        barplot([i["DOPE score"] for i in ok_models],
-                ["Model", "Dope score", "Dope score per model"],
+        histplot([i["DOPE score"] for i in ok_models],
+                ["Dope score", "Frequency", "Dope score histogram"],
                 results + "dope_per_model_{0}.svg".format(os.getpid()))
     # Write data summary
     summary_data(ok_models, results)
@@ -652,6 +636,16 @@ def compute_profile(data):
     return get_profile(data[1], aln[os.path.basename(data[0]).split(".")[0]])
 
 
+def get_session_id(alignment_file):
+    """Get the id of previous calculation
+    """
+    session_id = os.getpid()
+    regex = re.compile("[\w-]+_([0-9]+)_aln.pir")
+    match = regex.match(alignment_file)
+    if match:
+        session_id = match.group(1)
+    return session_id
+
 
 def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
     """Compute and load the profile of each model
@@ -665,7 +659,8 @@ def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
     return profile
 
 
-def plot_DOPE_profile(list_template, list_model, list_model_files, results):
+def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
+                      results):
     """Plot the dope result for each residue of each model
     """
     # Get color map
@@ -684,12 +679,32 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, results):
     # Plot models
     for i in xrange(len(list_model)):
         ax1.plot(list_model[i], color=colors[i], linewidth=1, label='Model')
-    ax1.legend(["template"] + [(list_model_files[i].split(".")[0]
-                                + "_{0}".format(i + 1))
-                               for i in xrange(len(list_model_files))],
-               loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
-               ncol=3, fancybox=True, shadow=True)
-    plt.savefig(results + os.sep + 'dope_profile_{0}.svg'.format(os.getpid()))
+#     ax1.legend(["template"] + [(list_model_files[i].split(".")[0]
+#                                 + "_{0}".format(i + 1))
+#                                for i in xrange(len(list_model_files))],
+#                loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
+#                ncol=3, fancybox=True, shadow=True)
+    plt.savefig(results + os.sep + 'dope_profile_{0}.svg'.format(sessionid))
+
+
+def load_summary(summary_file):
+    """Load summary data
+    """
+    summary_data = {}
+    try:
+        with open(summary_file, "rt") as summary:
+            summary_reader = csv.reader(summary, delimiter='\t')
+            # Pass head
+            summary_reader.next()
+            for line in summary_reader:
+                if(len(line) == 4):
+                    summary_data[line[0]] = [float(val) for val in line[1:]]
+    except ValueError:
+        sys.exit("Error cannot convert the element of {0}"
+                 " into float".format(line))
+    except IOError:
+        sys.exit("Error cannot open {0}".format(summary_file))
+    return summary_data
 
 
 def run_verification(conf_data, structure_check):
@@ -747,6 +762,9 @@ def main():
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)]
         list_model_files = [i + ".pdb" for i in list_model]
+        sessionid = get_session_id(args.alignment_file)
+        summary_file = (args.results + "modeller_summary_"
+                        + str(sessionid) + ".csv")
         # Load alignment
         list_template = load_profiles(env, pdb_files, pdb_codes,
                                       args.alignment_file, args.thread,
@@ -756,7 +774,13 @@ def main():
                                    args.results)
         # Plot DOPE profile
         plot_DOPE_profile(list_template, list_model, list_model_files,
-                          args.results)
+                          sessionid, args.results)
+        if (os.path.isfile(summary_file)):
+            summary_data = load_summary(summary_file)
+            histplot([summary_data[model]["DOPE score"]
+                      for model in summary_data],
+                     ["Dope score", "Frequency", "Dope score histogram"],
+                     args.results + "dope_per_model_{0}.svg".format(sessionid))
     if args.structure_check:
         run_verification(None, args.structure_check)
 
