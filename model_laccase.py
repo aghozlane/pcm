@@ -642,8 +642,6 @@ def get_session_id(alignment_file):
     match = regex.match(os.path.basename(alignment_file))
     if match:
         session_id = match.group(1)
-    else:
-        sys.exit("{0} not found".format(alignment_file))
     return session_id
 
 
@@ -757,8 +755,8 @@ def main():
         args.model_name = get_model(args.alignment_file, pdb_codes)
     if MODELLER:
         # request verbose output
-        log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
-        log.verbose()
+#         log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
+#         log.verbose()
         # Load environment
         env = get_environment(pdb_files)
     if MODELLER and "modeling" in args.list_operations:
