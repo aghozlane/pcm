@@ -187,7 +187,7 @@ def get_arguments():
     parser.add_argument('-n', '--number_model', type=int,
                         help='Number of model to produce.')
     parser.add_argument('-q', '--model_quality', type=str,
-                        choices=["fast", "normal", "max"],
+                        choices=["very_fast", "fast", "normal", "max"],
                         help='Adjust the quality of the modeling.')
     parser.add_argument('-s', '--structure_check', type=str,
                         nargs='+', choices=["proq", "procheck", "verify3d"],
@@ -498,11 +498,12 @@ def get_model(aln_file, pdb_codes):
 def get_environment(pdb_files):
     """Set Modeller environment parameters
     """
-    env = environ()
+    env = environ(restyp_lib_file="${LIB}/restyp.lib")
     # Set PDB directory
     env.io.atom_files_directory = [os.path.dirname(pdb) for pdb in pdb_files]
     # Read in HETATM records from template PDBs
     env.io.hetatm = True
+#
     env.libs.topology.read(file="$(LIB)/top_heav.lib")
     env.libs.parameters.read(file="$(LIB)/par.lib")
     return env
@@ -531,9 +532,11 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
     atm.ending_model = int(number_model)
     # Start slave
     atm.use_parallel_job(job_worker)
-    if model_quality == "fast":
-        print("Start fast modeling")
+    if model_quality == "very_fast":
+        print("Start very fast modeling")
         atm.very_fast()
+    elif model_quality == "fast":
+        print("Start fast modeling")
     elif model_quality == "normal":
         print("Start normal speed modeling")
         atm.md_level = refine.slow
@@ -562,26 +565,25 @@ def histplot(data, label, result_data):
     plt.clf()
 
 
-def summary_data(data, results):
+def summary_data(data, results, sessionid):
     """
     """
-    output_file = results + "modeller_summary_{0}.csv".format(os.getpid())
+    summary_file = (results + "modeller_summary_" + str(sessionid) + ".csv")
     try:
-        with open(output_file, "wt") as out:
+        with open(summary_file, "wt") as out:
             writer = csv.writer(out, delimiter='\t')
             writer.writerow(["Model", "molpdf", "DOPE score",
                              "Normalized DOPE score", "GA341 score"])
             for i in xrange(len(data)):
-                writer.writerow([(data[i]["name"].split(".")[0]
-                                  + "_{0}".format(i + 1)), data[i]["molpdf"],
+                writer.writerow([data[i]["name"], data[i]["molpdf"],
                                  data[i]["DOPE score"],
                                  data[i]["Normalized DOPE score"],
                                  data[i]["GA341 score"][0]])
     except IOError:
-        sys.exit("Error cannot open {0}".format(output_file))
+        sys.exit("Error cannot open {0}".format(summary_file))
 
 
-def save_general_data(atm, results):
+def save_general_data(atm, results, sessionid):
     """Write general parameters of the produced models
     """
     # Get converged models
@@ -592,9 +594,21 @@ def save_general_data(atm, results):
     if MATPLOTLIB:
         histplot([i["DOPE score"] for i in ok_models],
                 ["Dope score", "Frequency", "Dope score histogram"],
-                results + "dope_per_model_{0}.svg".format(os.getpid()))
+                results + "dope_per_model_{0}.svg".format(sessionid))
     # Write data summary
-    summary_data(ok_models, results)
+    summary_data(ok_models, results, sessionid)
+
+
+def insert_gaps(vals, seq):
+    """
+    """
+    # Insert gaps into the profile corresponding to those in seq:
+    for n, res in enumerate(seq.residues):
+        for gap in xrange(res.get_leading_gaps()):
+            vals.insert(n, None)
+    # Add a gap at position '0', so that we effectively count from 1:
+    vals.insert(0, None)
+    return vals
 
 
 def get_profile(profile_file, seq):
@@ -610,13 +624,8 @@ def get_profile(profile_file, seq):
                     vals.append(float(spl[-1]))
     except IOError:
         sys.exit("Error cannot open {0}".format(profile_file))
-    # Insert gaps into the profile corresponding to those in seq:
-    for n, res in enumerate(seq.residues):
-        for gap in xrange(res.get_leading_gaps()):
-            vals.insert(n, None)
-    # Add a gap at position '0', so that we effectively count from 1:
-    vals.insert(0, None)
-    return vals
+
+    return insert_gaps(vals, seq)
 
 
 def compute_profile(data):
@@ -624,14 +633,27 @@ def compute_profile(data):
     """
     env = get_environment([data[0]])
     aln = alignment(env, file=data[2])
+    aln_template = aln[os.path.basename(data[0]).split(".")[0]]
     # env and pdbfile
+    print(data[0])
     pdb = complete_pdb(env, data[0])
     # all atom selection
     s = selection(pdb)
     # profile result
-    s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=data[1],
-                  normalize_profile=False, smoothing_window=15)
-    return get_profile(data[1], aln[os.path.basename(data[0]).split(".")[0]])
+#     s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=data[1],
+#                   normalize_profile=False, smoothing_window=15)
+#     return get_profile(data[1], aln[os.path.basename(data[0]).split(".")[0]])
+    # Energy profile
+    profile = s.get_dope_profile()
+    profile.write_to_file(".".join(os.path.basename(data[0]).split(".")[:-1])
+                          + ".profile")
+    # Get smooth curve
+    profile_smooth = profile.get_smoothed(window=15)
+    profile_smooth.write_to_file(
+        ".".join(os.path.basename(data[0]).split(".")[:-1])
+        + "_smooth.profile")
+    return [insert_gaps([i.energy for i in profile], aln_template),
+            insert_gaps([i.energy for i in profile_smooth], aln_template)]
 
 
 def get_session_id(alignment_file):
@@ -654,11 +676,11 @@ def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
     pool = mp.Pool(processes=thread)
     asyncResult = pool.map_async(compute_profile, list_run)
     profile = asyncResult.get()
-    return profile
+    return [i[0] for i in profile], [i[1] for i in profile]
 
 
 def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
-                      pdb_codes, results):
+                      pdb_codes, results, note=None):
     """Plot the dope result for each residue of each model
     """
     # Get color map
@@ -680,9 +702,10 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
         model_col = ax1.plot(list_model[i], color=colors[i], linewidth=1,
                              label='Model')
     if(len(list_model_files) <= 10):
-        ax1.legend(["template"] + [(os.path.basename(list_model_files[i]).split(".")[0]
-                                    + "_{0}".format(i + 1))
-                                   for i in xrange(len(list_model_files))],
+        ax1.legend(["template"] +
+                   [(os.path.basename(list_model_files[i]).split(".")[0]
+                     + "_{0}".format(i + 1))
+                    for i in xrange(len(list_model_files))],
                    loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
                    ncol=3, fancybox=True, shadow=True)
     else:
@@ -690,8 +713,12 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                    [os.path.basename(list_model_files[0]).split(".")[0] + "_*"],
                    loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
                    ncol=3, fancybox=True, shadow=True)
-
-    plt.savefig(results + os.sep + 'dope_profile_{0}.svg'.format(sessionid))
+    if note:
+        plt.savefig(results + os.sep +
+                    'dope_profile_{0}_{1}.svg'.format(sessionid, note))
+    else:
+        plt.savefig(results + os.sep +
+                    'dope_profile_{0}.svg'.format(sessionid))
     plt.clf()
 
 
@@ -753,6 +780,8 @@ def main():
         sys.exit(parser.print_help())
     if not args.model_name:
         args.model_name = get_model(args.alignment_file, pdb_codes)
+    # Get session id
+    sessionid = get_session_id(args.alignment_file)
     if MODELLER:
         # request verbose output
 #         log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
@@ -765,24 +794,34 @@ def main():
         atm = compute_models(env, job_worker, args.alignment_file, pdb_codes,
                              pdb_files, args.model_name, args.model_quality,
                              args.number_model)
-        save_general_data(atm, args.results)
+        save_general_data(atm, args.results, sessionid)
     if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
+        summary_file = (args.results + "modeller_summary_"
+                        + str(sessionid) + ".csv")
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
-        sessionid = get_session_id(args.alignment_file)
-        summary_file = (args.results + "modeller_summary_"
-                        + str(sessionid) + ".csv")
         # Load alignment
-        list_template = load_profiles(env, pdb_files, pdb_codes,
-                                      args.alignment_file, args.thread,
-                                      args.results)
-        list_model = load_profiles(env, list_model_files, list_model,
-                                   args.alignment_file, args.thread,
-                                   args.results)
+        (list_template_profile,
+         list_template_profile_smooth) = load_profiles(env, pdb_files,
+                                                       pdb_codes,
+                                                       args.alignment_file,
+                                                       args.thread,
+                                                       args.results)
+        (list_model_profile,
+         list_model_profile_smooth) = load_profiles(env, list_model_files,
+                                                    list_model,
+                                                    args.alignment_file,
+                                                    args.thread,
+                                                    args.results)
         # Plot DOPE profile
-        plot_DOPE_profile(list_template, list_model, list_model_files,
+        plot_DOPE_profile(list_template_profile, list_model_profile,
+                          list_model_files,
                           sessionid, pdb_codes, args.results)
+        # Plot DOPE smooth profile
+        plot_DOPE_profile(list_template_profile_smooth,
+                          list_model_profile_smooth, list_model_files,
+                          sessionid, pdb_codes, args.results, "smooth")
         if (os.path.isfile(summary_file)):
             summary_data = load_summary(summary_file)
             histplot([summary_data[model][1]
