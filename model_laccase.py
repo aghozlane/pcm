@@ -76,6 +76,8 @@ class ModelingConfig:
         # Read config file
         self.config.read(self.phyconfig_file)
         # Get parameter value
+        self.hdict["download_url"] = self.config.get('PDB_config',
+                                                     'download_url')
         self.hdict["clustalo"] = self.config.get('Alignment_config',
                                                  'clustalo')
         self.hdict["clustalw2"] = self.config.get('Alignment_config',
@@ -92,6 +94,8 @@ class ModelingConfig:
         """Write modeling config
         """
         self.config.add_section('Alignment_config')
+        self.config.set("PDB_config", "download_url",
+                        "http://www.rcsb.org/pdb/files/")
         self.config.set('Alignment_config', 'clustalo',
                         "%path_soft{0}clustalo -i %multifasta -o %output "
                         "--threads=%proc --auto -t Protein "
@@ -503,7 +507,7 @@ def get_environment(pdb_files):
     env.io.atom_files_directory = [os.path.dirname(pdb) for pdb in pdb_files]
     # Read in HETATM records from template PDBs
     env.io.hetatm = True
-#
+    # Set topology parameters
     env.libs.topology.read(file="$(LIB)/top_heav.lib")
     env.libs.parameters.read(file="$(LIB)/par.lib")
     return env
