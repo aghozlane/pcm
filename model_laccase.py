@@ -93,9 +93,10 @@ class ModelingConfig:
     def writeconfig(self):
         """Write modeling config
         """
-        self.config.add_section('Alignment_config')
+        self.config.add_section('PDB_config')
         self.config.set("PDB_config", "download_url",
                         "http://www.rcsb.org/pdb/files/")
+        self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_soft{0}clustalo -i %multifasta -o %output "
                         "--threads=%proc --auto -t Protein "
