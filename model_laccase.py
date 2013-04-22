@@ -22,6 +22,7 @@ import urllib2
 import subprocess
 import re
 import csv
+import math
 import multiprocessing as mp
 try:
     from modeller import *
@@ -695,7 +696,7 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
     fig = plt.figure(figsize=(10, 7))
     ax1 = fig.add_subplot(1, 1, 1)
     ax1.set_xlabel('Alignment position')
-    ax1.set_ylabel('DOPE per-residue score')
+    ax1.set_ylabel('DOPE score per-residue')
     ax1.set_xlim(0, len(list_model[0]))
     # Plot templates
     for template in list_template:
@@ -714,7 +715,8 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                    ncol=3, fancybox=True, shadow=True)
     else:
         ax1.legend([temp_col[0], model_col[-1]], pdb_codes +
-                   [os.path.basename(list_model_files[0]).split(".")[0] + "_*"],
+                   [os.path.basename(list_model_files[0]).split(".")[0]
+                    + "_*"],
                    loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
                    ncol=3, fancybox=True, shadow=True)
     if note:
@@ -725,10 +727,43 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                     'dope_profile_{0}.svg'.format(sessionid))
     plt.clf()
 
+
 def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
-                              sessionid, pdb_codes, results, note=None):
+                              sessionid, results):
+    """UGLY
     """
-    """
+    # Plot templates
+    for i in xrange(len(list_template)):
+        middle = math.ceil(len(list_template[i]) / 2.0)
+        part = [[0, int(middle)]]
+        part += [[int(middle) + 1 , len(list_template[i])]]
+        for e in part:
+            # Plot models
+            for j in xrange(len(list_model)):
+                dist = abs(len(list_model[j]) - len(list_template[i]))
+                if(len(list_model[j]) < len(list_template[i])):
+                    list_model[j] += list_template[i][-dist :]
+                elif(len(list_model[j]) > len(list_template[i])):
+                    list_template[i] += list_model[j][-dist :]
+                assert(len(list_model[j]) == len(list_template[i]))
+                # Plot the template and model profiles in the same plot for comparison:
+                fig = plt.figure(figsize=(10, 7))
+                ax1 = fig.add_subplot(1, 1, 1)
+                ax1.set_xlabel('Alignment position')
+                ax1.set_ylabel('DOPE score per-residue')
+                ax1.set_xlim(e[0], e[1])
+                ax1.plot(list_template[i], color="green", linewidth=1,
+                         label='Template')
+                ax1.plot(list_model[j], color="black", linewidth=1,
+                         label='Model')
+                model_name = ".".join(os.path.basename(list_model_files[j])
+                                      .split(".")[:-1])
+                plt.savefig(results + os.sep +
+                            'partial_dope_profile_{0}.svg'
+                            .format("_".join([str(sessionid), str(i),
+                                              model_name, str(e[0]),
+                                              str(e[1])])))
+                plt.clf()
 
 
 def compute_delta_DOPE(template_profile, list_model_profile):
@@ -756,10 +791,6 @@ def plot_delta_DOPE_profile(list_delta_dope, num_template, list_model_files,
                             sessionid, results):
     """
     """
-    # Get color map
-    color_map = cm.get_cmap('gist_rainbow')
-    colors = [color_map(1.*i / len(list_delta_dope))
-              for i in xrange(len(list_delta_dope))]
     # Plot models
     for i in xrange(len(list_delta_dope)):
         # Plot the template and model profiles in the same plot for comparison:
@@ -770,7 +801,7 @@ def plot_delta_DOPE_profile(list_delta_dope, num_template, list_model_files,
         ax1.set_xlim(0, len(list_delta_dope[0]))
         model_name = ".".join(
                         os.path.basename(list_model_files[i]).split(".")[:-1])
-        ax1.plot(list_delta_dope[i], color=colors[i], linewidth=1,
+        ax1.plot(list_delta_dope[i], color="black", linewidth=1,
                  label='Template' + model_name)
         plt.savefig(results + os.sep + "delta_dope_profile_"
                     "{0}_{1}_{2}.svg".format(sessionid, num_template,
@@ -811,7 +842,8 @@ def save_delta_DOPE_profile(list_model_files, list_model_profile,
         seq_pdb = get_sequence(list_model_files[0])
         for i in xrange(len(list_delta_dope)):
             num = 0
-            model_name = ".".join(os.path.basename(list_model_files[i]).split(".")[:-1])
+            model_name = ".".join(
+                         os.path.basename(list_model_files[i]).split(".")[:-1])
             output_file = results + os.sep + model_name + ".delta_dope_profile"
             with open(output_file, "wt") as output:
                 for j in xrange(len(list_delta_dope[i])):
@@ -826,6 +858,7 @@ def save_delta_DOPE_profile(list_model_files, list_model_profile,
                         num += 1
     except IOError:
         sys.exit("Error cannot open {0}".format(output_file))
+
 
 def load_summary(summary_file):
     """Load summary data
@@ -928,8 +961,7 @@ def main():
                           sessionid, pdb_codes, args.results, "smooth")
         # Plot partial DOPE
         plot_partial_DOPE_profile(list_template_profile, list_model_profile,
-                                  list_model_files, sessionid, pdb_codes,
-                                  args.results)
+                                  list_model_files, sessionid, args.results)
         # Delta DOPE
         for i in xrange(len(list_template_profile)):
             list_delta_dope = compute_delta_DOPE(list_template_profile[i],
