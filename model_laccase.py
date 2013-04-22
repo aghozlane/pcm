@@ -640,7 +640,6 @@ def compute_profile(data):
     aln = alignment(env, file=data[2])
     aln_template = aln[os.path.basename(data[0]).split(".")[0]]
     # env and pdbfile
-    print(data[0])
     pdb = complete_pdb(env, data[0])
     # all atom selection
     s = selection(pdb)
@@ -672,10 +671,10 @@ def get_session_id(alignment_file):
     return session_id
 
 
-def load_profiles(env, pdb_files, pdb_codes, alignment_file, thread, results):
+def load_profiles(pdb_files, pdb_codes, alignment_file, thread, results):
     """Compute and load the profile of each model
     """
-    list_run = [[ pdb_files[i], (results + pdb_codes[i] + '.profile'),
+    list_run = [[pdb_files[i], (results + pdb_codes[i] + '.profile'),
                  alignment_file]
                 for i in xrange(len(pdb_files))]
     pool = mp.Pool(processes=thread)
@@ -726,6 +725,107 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                     'dope_profile_{0}.svg'.format(sessionid))
     plt.clf()
 
+def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
+                              sessionid, pdb_codes, results, note=None):
+    """
+    """
+
+
+def compute_delta_DOPE(template_profile, list_model_profile):
+    """
+    """
+    delta = []
+    for model_profile in list_model_profile:
+        dist = abs(len(model_profile) - len(template_profile))
+        if(len(model_profile) < len(template_profile)):
+            model_profile += template_profile[-dist :]
+        elif(len(model_profile) > len(template_profile)):
+            template_profile += model_profile[-dist :]
+        assert(len(model_profile) == len(template_profile))
+        profile = []
+        for i in xrange(len(model_profile)):
+            if(model_profile[i] and template_profile[i]):
+                profile.append(model_profile[i] - template_profile[i])
+            else:
+                profile.append(None)
+        delta += [profile]
+    return delta
+
+
+def plot_delta_DOPE_profile(list_delta_dope, num_template, list_model_files,
+                            sessionid, results):
+    """
+    """
+    # Get color map
+    color_map = cm.get_cmap('gist_rainbow')
+    colors = [color_map(1.*i / len(list_delta_dope))
+              for i in xrange(len(list_delta_dope))]
+    # Plot models
+    for i in xrange(len(list_delta_dope)):
+        # Plot the template and model profiles in the same plot for comparison:
+        fig = plt.figure(figsize=(10, 7))
+        ax1 = fig.add_subplot(1, 1, 1)
+        ax1.set_xlabel('Alignment position')
+        ax1.set_ylabel('delta DOPE per-residue score')
+        ax1.set_xlim(0, len(list_delta_dope[0]))
+        model_name = ".".join(
+                        os.path.basename(list_model_files[i]).split(".")[:-1])
+        ax1.plot(list_delta_dope[i], color=colors[i], linewidth=1,
+                 label='Template' + model_name)
+        plt.savefig(results + os.sep + "delta_dope_profile_"
+                    "{0}_{1}_{2}.svg".format(sessionid, num_template,
+                                             model_name))
+        plt.clf()
+
+
+def get_unique(seq):
+    """Unique with order preserving
+    """
+    seen = set()
+    return [x for x in seq if x not in seen and not seen.add(x)]
+
+
+def get_sequence(pdb_file):
+    """
+    """
+    seqpdb = []
+    try:
+        with open(pdb_file, "rt") as pdb:
+            for line in pdb:
+                if line[0:4] == "ATOM":
+                    seqpdb.append(line[17:20] + "_" + str(int(line[23:26])))
+            assert(len(seqpdb) > 0)
+            seqpdb = get_unique(seqpdb)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_file))
+    except ValueError:
+        sys.exit("Nothing read from {0}".format(pdb_file))
+    return seqpdb
+
+
+def save_delta_DOPE_profile(list_model_files, list_model_profile,
+                            list_delta_dope, results):
+    """
+    """
+    try:
+        seq_pdb = get_sequence(list_model_files[0])
+        for i in xrange(len(list_delta_dope)):
+            num = 0
+            model_name = ".".join(os.path.basename(list_model_files[i]).split(".")[:-1])
+            output_file = results + os.sep + model_name + ".delta_dope_profile"
+            with open(output_file, "wt") as output:
+                for j in xrange(len(list_delta_dope[i])):
+                    if(list_model_profile[i][j]):
+                        if list_delta_dope[i][j]:
+                            output.write("{0}\t{1}\n".format(
+                                seq_pdb[num].split("_")[0],
+                                list_delta_dope[i][j]))
+                        else:
+                            output.write("{0}\t0\n".format(
+                                seq_pdb[num].split("_")[0]))
+                        num += 1
+    except IOError:
+        sys.exit("Error cannot open {0}".format(output_file))
 
 def load_summary(summary_file):
     """Load summary data
@@ -808,25 +908,37 @@ def main():
         list_model_files = [args.results + i + ".pdb" for i in list_model]
         # Load alignment
         (list_template_profile,
-         list_template_profile_smooth) = load_profiles(env, pdb_files,
+         list_template_profile_smooth) = load_profiles(pdb_files,
                                                        pdb_codes,
                                                        args.alignment_file,
                                                        args.thread,
                                                        args.results)
         (list_model_profile,
-         list_model_profile_smooth) = load_profiles(env, list_model_files,
+         list_model_profile_smooth) = load_profiles(list_model_files,
                                                     list_model,
                                                     args.alignment_file,
                                                     args.thread,
                                                     args.results)
         # Plot DOPE profile
         plot_DOPE_profile(list_template_profile, list_model_profile,
-                          list_model_files,
-                          sessionid, pdb_codes, args.results)
+                          list_model_files, sessionid, pdb_codes, args.results)
         # Plot DOPE smooth profile
         plot_DOPE_profile(list_template_profile_smooth,
                           list_model_profile_smooth, list_model_files,
                           sessionid, pdb_codes, args.results, "smooth")
+        # Plot partial DOPE
+        plot_partial_DOPE_profile(list_template_profile, list_model_profile,
+                                  list_model_files, sessionid, pdb_codes,
+                                  args.results)
+        # Delta DOPE
+        for i in xrange(len(list_template_profile)):
+            list_delta_dope = compute_delta_DOPE(list_template_profile[i],
+                                            list_model_profile)
+            plot_delta_DOPE_profile(list_delta_dope, i, list_model_files,
+                                    sessionid, args.results)
+            save_delta_DOPE_profile(list_model_files, list_model_profile,
+                                    list_delta_dope, args.results)
+        # Histogram of DOPE
         if (os.path.isfile(summary_file)):
             summary_data = load_summary(summary_file)
             histplot([summary_data[model][1]
