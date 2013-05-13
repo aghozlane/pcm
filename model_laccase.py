@@ -490,6 +490,7 @@ def get_model(aln_file, pdb_codes):
             for line in aln:
                 match = regex.match(line)
                 if match:
+                    # Get first element if not specified
                     if match.group(1) not in pdb_codes:
                         model = match.group(1)
                         break
@@ -534,7 +535,7 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
                     assess_methods=[assess.GA341, assess.DOPE,
                                     assess.normalized_dope])
     # Indicate number of template and model
-    atm.starting_model = len(pdb_codes)
+    atm.starting_model = 1
     atm.ending_model = int(number_model)
     # Start slave
     atm.use_parallel_job(job_worker)
@@ -692,45 +693,49 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
     color_map = cm.get_cmap('gist_rainbow')
     colors = [color_map(1.*i / len(list_model))
               for i in xrange(len(list_model))]
-    # Plot the template and model profiles in the same plot for comparison:
-    fig = plt.figure(figsize=(10, 7))
-    ax1 = fig.add_subplot(1, 1, 1)
-    ax1.set_xlabel('Alignment position')
-    ax1.set_ylabel('DOPE score per-residue')
-    ax1.set_xlim(0, len(list_model[0]))
-    # Plot templates
-    for template in list_template:
-        temp_col = ax1.plot(template, color="green", linewidth=1,
+    for t in xrange(len(list_template)):
+        # Plot the template and model profiles in the same plot for comparison:
+        fig = plt.figure(figsize=(10, 7))
+        ax1 = fig.add_subplot(1, 1, 1)
+        ax1.set_xlabel('Alignment position')
+        ax1.set_ylabel('DOPE score per-residue')
+        ax1.set_xlim(0, len(list_model[0]))
+        # Plot templates
+        temp_col = ax1.plot(list_template[t], color="green", linewidth=1,
                             label='Template')
-    # Plot models
-    for i in xrange(len(list_model)):
-        model_col = ax1.plot(list_model[i], color=colors[i], linewidth=1,
-                             label='Model')
-    if(len(list_model_files) <= 10):
-        ax1.legend(["template"] +
-                   [(os.path.basename(list_model_files[i]).split(".")[0]
-                     + "_{0}".format(i + 1))
-                    for i in xrange(len(list_model_files))],
-                   loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
-                   ncol=3, fancybox=True, shadow=True)
-    else:
-        ax1.legend([temp_col[0], model_col[-1]], pdb_codes +
-                   [os.path.basename(list_model_files[0]).split(".")[0]
-                    + "_*"],
-                   loc="upper center", numpoints=1, bbox_to_anchor=(0.5, 1.12),
-                   ncol=3, fancybox=True, shadow=True)
-    if note:
-        plt.savefig(results + os.sep +
-                    'dope_profile_{0}_{1}.svg'.format(sessionid, note))
-    else:
-        plt.savefig(results + os.sep +
-                    'dope_profile_{0}.svg'.format(sessionid))
-    plt.clf()
+        # Plot models
+        for i in xrange(len(list_model)):
+            model_col = ax1.plot(list_model[i], color=colors[i], linewidth=1,
+                                 label='Model')
+        if(len(list_model_files) <= 10):
+            ax1.legend([pdb_codes[t]] +
+                       [(os.path.basename(list_model_files[i]).split(".")[0]
+                         + "_{0}".format(i + 1))
+                        for i in xrange(len(list_model_files))],
+                       loc="upper center", numpoints=1,
+                       bbox_to_anchor=(0.5, 1.12),
+                       ncol=3, fancybox=True, shadow=True)
+        else:
+            ax1.legend([temp_col, model_col[-1]], pdb_codes[t] +
+                       [os.path.basename(list_model_files[0]).split(".")[0]
+                        + "_*"],
+                       loc="upper center", numpoints=1,
+                       bbox_to_anchor=(0.5, 1.12),
+                       ncol=3, fancybox=True, shadow=True)
+        if note:
+            plt.savefig(results + os.sep +
+                        'dope_profile_{0}_{1}_{2}.svg'
+                        .format(sessionid, pdb_codes[t], note))
+        else:
+            plt.savefig(results + os.sep +
+                        'dope_profile_{0}_{1}.svg'.format(sessionid,
+                                                          pdb_codes[t]))
+        plt.clf()
 
 
 def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
-                              sessionid, results):
-    """UGLY
+                              sessionid, pdb_codes, results):
+    """Divide the protein in two side and plot dope
     """
     # Plot templates
     for i in xrange(len(list_template)):
@@ -753,16 +758,22 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
                 ax1.set_ylabel('DOPE score per-residue')
                 ax1.set_xlim(e[0], e[1])
                 ax1.plot(list_template[i], color="green", linewidth=1,
-                         label='Template')
+                         label=pdb_codes[i])
                 ax1.plot(list_model[j], color="black", linewidth=1,
                          label='Model')
                 model_name = ".".join(os.path.basename(list_model_files[j])
                                       .split(".")[:-1])
+                ax1.legend(
+                    [pdb_codes[i]] +
+                    [model_name.split(".")[0] + "_{0}".format(i + 1)],
+                    loc="upper center", numpoints=1,
+                    bbox_to_anchor=(0.5, 1.12),
+                    ncol=2, fancybox=True, shadow=True)
                 plt.savefig(results + os.sep +
                             'partial_dope_profile_{0}.svg'
-                            .format("_".join([str(sessionid), str(i),
-                                              model_name, str(e[0]),
-                                              str(e[1])])))
+                            .format("_".join([str(sessionid), pdb_codes[i],
+                                              model_name, str(e[0] + 1),
+                                              str(e[1] + 1)])))
                 plt.clf()
 
 
@@ -787,9 +798,9 @@ def compute_delta_DOPE(template_profile, list_model_profile):
     return delta
 
 
-def plot_delta_DOPE_profile(list_delta_dope, num_template, list_model_files,
-                            sessionid, results):
-    """
+def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
+                            sessionid, results, template_pdb):
+    """Plot delta dope profile
     """
     # Plot models
     for i in xrange(len(list_delta_dope)):
@@ -802,15 +813,15 @@ def plot_delta_DOPE_profile(list_delta_dope, num_template, list_model_files,
         model_name = ".".join(
                         os.path.basename(list_model_files[i]).split(".")[:-1])
         ax1.plot(list_delta_dope[i], color="black", linewidth=1,
-                 label='Template' + model_name)
-        plt.savefig(results + os.sep + "delta_dope_profile_"
-                    "{0}_{1}_{2}.svg".format(sessionid, num_template,
-                                             model_name))
+                 label=template_pdb + model_name)
+        plt.savefig(results + os.sep + "delta_dope_profile_{0}.svg"
+                    .format("_".join([str(sessionid), template_pdb,
+                                      model_name])))
         plt.clf()
 
 
 def get_unique(seq):
-    """Unique with order preserving
+    """Get unique elements with order preserving
     """
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
@@ -835,27 +846,29 @@ def get_sequence(pdb_file):
 
 
 def save_delta_DOPE_profile(list_model_files, list_model_profile,
-                            list_delta_dope, results):
+                            list_delta_dope, results, template_pdb):
     """
     """
     try:
-        seq_pdb = get_sequence(list_model_files[0])
-        for i in xrange(len(list_delta_dope)):
-            num = 0
-            model_name = ".".join(
-                         os.path.basename(list_model_files[i]).split(".")[:-1])
-            output_file = results + os.sep + model_name + ".delta_dope_profile"
-            with open(output_file, "wt") as output:
-                for j in xrange(len(list_delta_dope[i])):
-                    if(list_model_profile[i][j]):
-                        if list_delta_dope[i][j]:
-                            output.write("{0}\t{1}\n".format(
-                                seq_pdb[num].split("_")[0],
-                                list_delta_dope[i][j]))
-                        else:
-                            output.write("{0}\t0\n".format(
-                                seq_pdb[num].split("_")[0]))
-                        num += 1
+        for mod in list_model_files:
+            seq_pdb = get_sequence(mod)
+            for i in xrange(len(list_delta_dope)):
+                num = 0
+                model_name = ".".join(
+                    os.path.basename(list_model_files[i]).split(".")[:-1])
+                output_file = (results + os.sep + template_pdb + "_" +
+                               model_name + ".delta_dope_profile")
+                with open(output_file, "wt") as output:
+                    for j in xrange(len(list_delta_dope[i])):
+                        if(list_model_profile[i][j] and num < len(seq_pdb)):
+                            if list_delta_dope[i][j]:
+                                output.write("{0}\t{1}\n".format(
+                                    seq_pdb[num].split("_")[0],
+                                    list_delta_dope[i][j]))
+                            else:
+                                output.write("{0}\t0\n".format(
+                                    seq_pdb[num].split("_")[0]))
+                            num += 1
     except IOError:
         sys.exit("Error cannot open {0}".format(output_file))
 
@@ -922,8 +935,8 @@ def main():
     sessionid = get_session_id(args.alignment_file)
     if MODELLER:
         # request verbose output
-#         log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
-#         log.verbose()
+        log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
+        log.verbose()
         # Load environment
         env = get_environment(pdb_files)
     if MODELLER and "modeling" in args.list_operations:
@@ -937,7 +950,8 @@ def main():
         summary_file = (args.results + "modeller_summary_"
                         + str(sessionid) + ".csv")
         list_model = [args.model_name + ".B" + str(99990000 + i)
-                      for i in xrange(1, args.number_model + 1)]
+                      for i in xrange(1, args.number_model + 1)
+                      if os.path.isfile(args.model_name + ".B" + str(99990000 + i) + ".pdb")]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
         # Load alignment
         (list_template_profile,
@@ -961,15 +975,17 @@ def main():
                           sessionid, pdb_codes, args.results, "smooth")
         # Plot partial DOPE
         plot_partial_DOPE_profile(list_template_profile, list_model_profile,
-                                  list_model_files, sessionid, args.results)
+                                  list_model_files, sessionid, pdb_codes,
+                                  args.results)
         # Delta DOPE
         for i in xrange(len(list_template_profile)):
             list_delta_dope = compute_delta_DOPE(list_template_profile[i],
                                             list_model_profile)
-            plot_delta_DOPE_profile(list_delta_dope, i, list_model_files,
-                                    sessionid, args.results)
+            plot_delta_DOPE_profile(list_delta_dope, list_model_files,
+                                    sessionid, args.results, pdb_codes[i])
             save_delta_DOPE_profile(list_model_files, list_model_profile,
-                                    list_delta_dope, args.results)
+                                    list_delta_dope, args.results,
+                                    pdb_codes[i])
         # Histogram of DOPE
         if (os.path.isfile(summary_file)):
             summary_data = load_summary(summary_file)
