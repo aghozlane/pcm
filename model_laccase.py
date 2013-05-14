@@ -11,7 +11,7 @@
 #    A copy of the GNU General Public License is available at
 #    http://www.gnu.org/licenses/gpl-3.0.html
 
-"""Run modelling."""
+"""Run modeling with modeller."""
 
 from __future__ import print_function
 import argparse
@@ -113,8 +113,9 @@ class ModelingConfig:
                         "-out %output".format(os.sep))
         self.config.set('Alignment_config', 't_coffee',
                         "%path_soft{0}t_coffee %multifasta "
-                        "-outfile %output -output pir_aln -mode 3dcoffee "
-                        "-n_core %proc -template_file %pdb".format(os.sep))
+                        "-outfile %output -output pir_aln  "
+                        "-n_core %proc".format(os.sep))
+        # -mode 3dcoffee -template_file %pdb
         # Write data
         try:
             # Writing our configuration file to 'example.cfg'
@@ -168,7 +169,7 @@ def get_arguments():
                         alignment_software="t_coffee",
                         path_alignment=local_path,
                         list_operations=["modeling", "profile"],
-                        add_heteroatom=0)
+                        add_heteroatom=0, heteroatom_models=[])
     parser.add_argument("-l", "--list_operations", type=str, nargs='+',
                         choices=["modeling", "profile", "verification"],
                         help='Select operations.')
@@ -182,8 +183,13 @@ def get_arguments():
                         help="Indicate the software that should be used to "
                         "align sequences.")
     parser.add_argument('-ht', '--add_heteroatom', type=int,
-                        help="Indicate the number of hetero-atom residue that "
+                        help="Indicate the number of hetero-atom residue(s) that "
                         "should be added to the alignment software.")
+    parser.add_argument('-hm', '--heteroatom_models',
+                        type=str, nargs='+',
+                        help="Indicate the models for which hetero-atom "
+                        "residue(s) should be added to the alignment "
+                        "software.")
     parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
                         help="List of pdb files or codes.")
     parser.add_argument('-e', '--model_name', type=str,
@@ -347,21 +353,26 @@ def check_format(aln_data, pdb_codes):
     return status, data
 
 
-def adjust_format(aln_pir_file, data_dict, pdb_codes, add_hetatm):
+def adjust_format(aln_pir_file, data_dict, pdb_codes,
+                  add_heteroatom, heteroatom_models):
     """Correct pir format and add heteroatom in the alignment
     """
     output_file = (os.path.dirname(aln_pir_file) + os.sep +
                    os.path.basename(aln_pir_file).split(".")[0]
                    + "_corrected.pir")
+    het_atm_flag = True
     het_atm = ""
     structure_present = False
-    if add_hetatm > 0:
-        het_atm = "." * add_hetatm
+    if add_heteroatom > 0:
+        het_atm = "." * add_heteroatom
     try:
         with open(output_file, "wt") as aln_pir:
             for element in data_dict:
+                if(element not in heteroatom_models
+                   and len(heteroatom_models) > 0):
+                    het_atm_flag = False
                 aln_pir.write(">P1;{0}\n".format(element))
-                if data_dict[element][0] and not add_hetatm:
+                if data_dict[element][0] and not add_heteroatom:
                     aln_pir.write(data_dict[element][0])
                 else:
                     # Write midline characteristic
@@ -372,21 +383,33 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes, add_hetatm):
                     sequence = data_dict[element][1].replace("-", "")
                     sequence = sequence.replace("\n", "")
                     sequence = sequence.replace("*", "")
-                    aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
-                                    type_data, element,
-                                    len(sequence) + add_hetatm)
-                                  + ": "*4 + "\n")
+                    if het_atm_flag:
+                        aln_pir.write("{0}:{1}:1 :A:{2}:A"
+                                      .format(type_data, element,
+                                              len(sequence) + add_heteroatom)
+                                      + ": "*4 + "\n")
+                    else:
+                        aln_pir.write("{0}:{1}:1 :A:{2}:A"
+                                      .format(type_data, element,
+                                              len(sequence))
+                                      + ": "*4 + "\n")
                 end_aln_posit = data_dict[element][1].index("*")
-                aln_pir.write("{0}{1}{2}\n".format(
-                    data_dict[element][1][0:end_aln_posit],
-                    het_atm, data_dict[element][1][end_aln_posit:]))
+                if het_atm_flag:
+                    aln_pir.write("{0}{1}{2}\n".format(
+                        data_dict[element][1][0:end_aln_posit],
+                        het_atm, data_dict[element][1][end_aln_posit:]))
+                else:
+                    aln_pir.write("{0}{1}\n".format(
+                        data_dict[element][1][0:end_aln_posit],
+                        data_dict[element][1][end_aln_posit:]))
+                het_atm_flag = True
     except IOError:
         sys.exit("Error cannot open {0}".format())
     assert(structure_present)
     return output_file
 
 
-def check_pir(aln_pir_file, pdb_codes, add_hetam):
+def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
     """Run checking of pir alignment file
     """
     try:
@@ -396,10 +419,10 @@ def check_pir(aln_pir_file, pdb_codes, add_hetam):
         with open(aln_pir_file, "rt") as aln_pir:
             aln_data = aln_pir.readlines()
         status, data_dict = check_format(aln_data, pdb_codes)
-        if not status or add_hetam > 0:
+        if not status or add_heteroatom > 0:
             print("Try to correct pir alignment format.", file=sys.stderr)
             aln_pir_file = adjust_format(aln_pir_file, data_dict, pdb_codes,
-                                         add_hetam)
+                                         add_heteroatom, heteroatom_models)
     except AssertionError:
         sys.exit("All PDB structures must be referenced in the alignment.")
     except IOError:
@@ -429,32 +452,48 @@ def get_fasta_data(aln_fasta_file):
     return data_fasta
 
 
-def write_pir_file(aln_pir_file, data_fasta, pdb_codes, add_hetatm):
+def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
+                   add_heteroatom, heteroatom_models):
     """Write new pir alignment
     """
+    hetatm_flag = True
     hetatm = ""
-    if add_hetatm > 0:
-        hetatm = "." * add_hetatm
+    if add_heteroatom > 0:
+        hetatm = "." * add_heteroatom
     try:
         with open(aln_pir_file, "wt") as aln_pir:
             for element in data_fasta:
                 aln_pir.write(">P1;{0}\n".format(element))
                 type_data = "sequence"
+                # Identify sequences with a pdb structure associated
                 if element in pdb_codes:
                     type_data = "structureX"
+                #
+                if (element not in heteroatom_models
+                    and len(heteroatom_models) > 0):
+                    hetatm_flag = False
                 sequence = data_fasta[element].replace("-", "")
                 sequence = sequence.replace("\n", "")
-                aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
+                if hetatm_flag:
+                    aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
                                 type_data, element,
-                                len(sequence) + add_hetatm)
+                                len(sequence) + add_heteroatom)
                                 + ": "*4 + "\n")
-                aln_pir.write("{0}{1}*\n".format(data_fasta[element], hetatm))
+                    aln_pir.write("{0}{1}*\n".format(data_fasta[element],
+                                                     hetatm))
+                else:
+                    aln_pir.write("{0}:{1}:1 :A:{2}:A"
+                                  .format(type_data, element, len(sequence))
+                                  + ": "*4 + "\n")
+                    aln_pir.write("{0}*\n".format(data_fasta[element]))
+                hetatm_flag = True
     except IOError:
         sys.exit("Error cannot open {0}".format(aln_pir_file))
 
 
 def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
-                  alignment_software, path_soft, add_hetatm, thread, results):
+                  alignment_software, path_soft, add_heteroatom,
+                  heteroatom_models, thread, results):
     """Compute alignment and adjust pir information
     """
     aln_pir_file = (results + alignment_software + "_" +
@@ -474,9 +513,11 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                                   path_soft, multifasta_file, pdb_files,
                                   aln_fasta_file, thread))
         data_fasta = get_fasta_data(aln_fasta_file)
-        write_pir_file(aln_pir_file, data_fasta, pdb_codes, add_hetatm)
+        write_pir_file(aln_pir_file, data_fasta, pdb_codes,
+                       add_heteroatom, heteroatom_models)
     if alignment_software in ("t_coffee", "clustalw2"):
-        aln_pir_file = check_pir(aln_pir_file, pdb_codes, add_hetatm)
+        aln_pir_file = check_pir(aln_pir_file, pdb_codes,
+                                 add_heteroatom, heteroatom_models)
     return aln_pir_file
 
 
@@ -751,7 +792,8 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
                 elif(len(list_model[j]) > len(list_template[i])):
                     list_template[i] += list_model[j][-dist :]
                 assert(len(list_model[j]) == len(list_template[i]))
-                # Plot the template and model profiles in the same plot for comparison:
+                # Plot the template and model profiles
+                # in the same plot for comparison:
                 fig = plt.figure(figsize=(10, 7))
                 ax1 = fig.add_subplot(1, 1, 1)
                 ax1.set_xlabel('Alignment position')
@@ -920,6 +962,7 @@ def main():
                                             args.alignment_software,
                                             args.path_alignment,
                                             args.add_heteroatom,
+                                            args.heteroatom_models,
                                             args.thread, args.results)
     elif args.multifasta_file and args.alignment_file:
         sys.exit("You have provided an alignment and the multifasta "
@@ -951,7 +994,8 @@ def main():
                         + str(sessionid) + ".csv")
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)
-                      if os.path.isfile(args.model_name + ".B" + str(99990000 + i) + ".pdb")]
+                      if os.path.isfile(args.model_name + ".B"
+                                        + str(99990000 + i) + ".pdb")]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
         # Load alignment
         (list_template_profile,
