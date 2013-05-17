@@ -757,7 +757,7 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                        bbox_to_anchor=(0.5, 1.12),
                        ncol=3, fancybox=True, shadow=True)
         else:
-            ax1.legend([temp_col, model_col[-1]], pdb_codes[t] +
+            ax1.legend([temp_col, model_col[-1]], [pdb_codes[t]] +
                        [os.path.basename(list_model_files[0]).split(".")[0]
                         + "_*"],
                        loc="upper center", numpoints=1,
