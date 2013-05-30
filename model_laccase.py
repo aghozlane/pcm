@@ -29,6 +29,7 @@ try:
     from modeller.parallel import *
     from modeller.automodel import *
     from modeller.scripts import complete_pdb
+    from MyModel import RestraintModel
     MODELLER = True
 except ImportError:
     MODELLER = False
@@ -163,14 +164,8 @@ def get_arguments():
     # Parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "model_laccase.py ")
-    parser.set_defaults(pdb_dir=local_path, results=local_path,
-                        number_model=8, thread=detect_cpus(),
-                        path_t_coffee=local_path, model_quality="normal",
-                        alignment_software="t_coffee",
-                        path_alignment=local_path,
-                        list_operations=["modeling", "profile"],
-                        add_heteroatom=0, heteroatom_models=[])
-    parser.add_argument("-l", "--list_operations", type=str, nargs='+',
+    parser.add_argument("-l", "--list_operations",
+                        default=["modeling", "profile"], type=str, nargs='+',
                         choices=["modeling", "profile", "verification"],
                         help='Select operations.')
     parser.add_argument('-f', '--multifasta_file', type=isfile,
@@ -178,14 +173,15 @@ def get_arguments():
     parser.add_argument('-i', '--alignment_file', type=isfile,
                         help='Alignment file in PIR format.')
     parser.add_argument('-a', '--alignment_software', type=str,
+                        default="clustalo",
                         choices=["clustalw2", "clustalo", "mafft", "muscle",
                                  "t_coffee"],
                         help="Indicate the software that should be used to "
                         "align sequences.")
-    parser.add_argument('-ht', '--add_heteroatom', type=int,
-                        help="Indicate the number of hetero-atom residue(s) that "
-                        "should be added to the alignment software.")
-    parser.add_argument('-hm', '--heteroatom_models',
+    parser.add_argument('-ht', '--add_heteroatom', type=int, default=0,
+                        help="Indicate the number of hetero-atom residue(s) "
+                        "that should be added to the alignment software.")
+    parser.add_argument('-hm', '--heteroatom_models', default=[],
                         type=str, nargs='+',
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
@@ -195,20 +191,25 @@ def get_arguments():
     parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize.')
     parser.add_argument('-g', '--path_alignment', type=isdir,
-                        help='Path to t_coffee software.')
-    parser.add_argument('-n', '--number_model', type=int,
+                        default=local_path, help='Path to t_coffee software.')
+    parser.add_argument('-n', '--number_model', type=int, default=8,
                         help='Number of model to produce.')
-    parser.add_argument('-q', '--model_quality', type=str,
+    parser.add_argument('-q', '--model_quality', type=str, default="fast",
                         choices=["very_fast", "fast", "normal", "max"],
                         help='Adjust the quality of the modeling.')
+    parser.add_argument('-d', '--psipred', type=isfile,
+                        help='Psipred file (*.psipass2).')
+    parser.add_argument('-b', '--limit_confidence', type=int, default=7,
+                        help='Confidence limit for psipred.')
     parser.add_argument('-s', '--structure_check', type=str,
                         nargs='+', choices=["proq", "procheck", "verify3d"],
                         help='Select phylogeny software.')
-    parser.add_argument('-r', '--results', type=isdir,
+    parser.add_argument('-r', '--results', type=isdir, default=local_path,
                         help='Path to result directory.')
     parser.add_argument('-k', '--path_check', type=isdir,
                         nargs='+', help='Path to alignment software.')
-    parser.add_argument('-t', '--thread', type=int, help='Number of thread.')
+    parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
+                        help='Number of thread.')
     parser.add_argument('-c', '--config', type=isfile,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
@@ -566,15 +567,112 @@ def get_parallel(thread):
     return job_worker
 
 
+# class MyModel(automodel):
+#     def special_restraints(self, aln):
+#         rsr = self.restraints
+#         rsr.add(secondary_structure.strand(self.residue_range('1:', '6:')))
+#         rsr.add(secondary_structure.strand(self.residue_range('9:', '14:')))
+#         for struct in psipred_result:
+#             # Constrain all residues to be alpha-helical
+#             if(struct[0] == "H"):
+#                 rsr.add(secondary_structure.alpha(
+#                     self.residue_range("{0}:".format(struct[1]),
+#                                        "{0}:".format(struct[2]))))
+#             # Constrain all residues to be beta-strand
+#             elif(struct[0] == "E"):
+#                 rsr.add(secondary_structure.strand(
+#                     self.residue_range("{0}:".format(struct[1]),
+#                                        "{0}:".format(struct[2]))))
+
+
+def load_psipred(psipred_file):
+    """
+    """
+    conf = []
+    pred = []
+    regex_conf = re.compile("^Conf:\s+([0-9]+)")
+    regex_pred = re.compile("^Pred:\s+([ECH]+)")
+#     regex_aa = re.compile("^AA:\s+([A-Z]+)")
+    try:
+        with open(psipred_file) as psipred:
+            for line in psipred:
+                match_conf = regex_conf.match(line)
+                match_pred = regex_pred.match(line)
+                if match_conf:
+                    conf += map(int, match_conf.group(1))
+                elif match_pred:
+                    pred += list(match_pred.group(1))
+    except IOError:
+        sys.exit("Error cannot open {0}".format(psipred_file))
+    except ValueError:
+        sys.exit("There is text value in confidence line\n{0}".format(line))
+    return conf, pred
+
+
+def cluster_psipred(conf, pred, limit_confidence):
+    """
+    """
+    psipred_clusters = []
+    struct = None
+    for i in xrange(len(pred)):
+        if(conf[i] >= limit_confidence and pred[i] in "HE" and not struct):
+            struct = ["", 0, 0]
+            struct[0] = pred[i]
+            struct[1] = i + 1
+        if(struct):
+            if(struct[0] != pred[i] or conf[i] < limit_confidence):
+                struct[2] = i
+                psipred_clusters += [struct]
+                struct = None
+    return psipred_clusters
+
+
 def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
-                   model_name, model_quality, number_model):
+                   model_name, model_quality, number_model, psipred,
+                   limit_confidence):
     """Define modeling parameters and start modeling 
     """
-    # Compute models
-    atm = automodel(env, alnfile=alignment_file,
-                    knowns=pdb_codes, sequence=model_name,
-                    assess_methods=[assess.GA341, assess.DOPE,
-                                    assess.normalized_dope])
+    # Load psipred
+    if(psipred):
+        conf, pred = load_psipred(psipred)
+        psipred_result = cluster_psipred(conf, pred, limit_confidence)
+        atm = RestraintModel(env, alnfile=alignment_file,
+                     knowns=pdb_codes, sequence=model_name,
+                     assess_methods=[assess.GA341, assess.DOPE,
+                                     assess.normalized_dope])
+        atm.psipred_result = psipred_result
+    else:
+#         # classical models
+        atm = automodel(env, alnfile=alignment_file,
+                        knowns=pdb_codes, sequence=model_name,
+                        assess_methods=[assess.GA341, assess.DOPE,
+                                        assess.normalized_dope])
+    # Load psipred
+#     if(psipred):
+#         conf, pred = load_psipred(psipred)
+#         psipred_result = cluster_psipred(conf, pred, limit_confidence)
+#         rsr = atm.restraints
+#         rsr.add(secondary_structure.strand(atm.residue_range(’1:’, ’6:’)))
+#         rsr.add(secondary_structure.strand(atm.residue_range(’9:’, ’14:’)))
+
+#         for struct in psipred_result:
+#             print(struct)
+#             # Constrain all residues to be alpha-helical
+#             if(struct[0] == "H"):
+#     #                 atm.restraints.add(
+#                 rsr.add(
+#                     secondary_structure.alpha(atm.residue_range("{0}:".format(struct[1]),
+#                                                                 "{0}:".format(struct[2]))))
+#             # Constrain all residues to be beta-strand
+#             elif(struct[0] == "E"):
+#                 rsr.add(
+#                     secondary_structure.strand(atm.residue_range("{0}:".format(struct[1]),
+#                                                                 "{0}:".format(struct[2]))))
+# #                 print(atm.residue_range(struct[1], struct[2]))
+# #                 atm.restraints.add(
+# #                     secondary_structure.strand(atm.residue_range(struct[1],
+# #                                                                  struct[2])))
+
     # Indicate number of template and model
     atm.starting_model = 1
     atm.ending_model = int(number_model)
@@ -597,6 +695,8 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
         # Very thorough VTFM optimization
         atm.library_schedule = autosched.slow
         atm.max_var_iterations = 300
+
+
     # Start modeling
     atm.make()
     return atm
@@ -740,7 +840,8 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.set_xlabel('Alignment position')
         ax1.set_ylabel('DOPE score per-residue')
-        ax1.set_xlim(0, len(list_model[0]))
+        if len(list_model) > 0:
+            ax1.set_xlim(0, len(list_model[0]))
         # Plot templates
         temp_col = ax1.plot(list_template[t], color="green", linewidth=1,
                             label='Template')
@@ -772,6 +873,55 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
                         'dope_profile_{0}_{1}.svg'.format(sessionid,
                                                           pdb_codes[t]))
         plt.clf()
+
+
+def plot_DOPE_profile_all(list_template, list_model, list_model_files,
+                          sessionid, pdb_codes, results, note=None):
+    """Plot the dope result for each residue of each model
+    """
+    # Get color map
+    color_map = cm.get_cmap('gist_rainbow')
+    colors = [color_map(1.*i / (len(list_model) + len(list_template)))
+              for i in xrange(len(list_model) + len(list_template))]
+    # Plot the template and model profiles in the same plot for comparison:
+    fig = plt.figure(figsize=(10, 7))
+    ax1 = fig.add_subplot(1, 1, 1)
+    ax1.set_xlabel('Alignment position')
+    ax1.set_ylabel('DOPE score per-residue')
+    if len(list_model) > 0:
+        ax1.set_xlim(0, len(list_model[0]))
+    for t in xrange(len(list_template)):
+        # Plot templates
+        temp_col = ax1.plot(list_template[t], color=colors[t], linewidth=1,
+                            label='Template')
+        # Plot models
+    for i in xrange(len(list_model)):
+        model_col = ax1.plot(list_model[i], color=colors[t + i + 1],
+                             linewidth=1, label='Model')
+    if(len(list_model_files) <= 10):
+        ax1.legend(pdb_codes +
+                   [(os.path.basename(list_model_files[i]).split(".")[0]
+                     + "_{0}".format(i + 1))
+                    for i in xrange(len(list_model_files))],
+                   loc="upper center", numpoints=1,
+                   bbox_to_anchor=(0.5, 1.12),
+                   ncol=3, fancybox=True, shadow=True)
+    else:
+        ax1.legend([temp_col, model_col[-1]], pdb_codes +
+                   [os.path.basename(list_model_files[0]).split(".")[0]
+                    + "_*"],
+                   loc="upper center", numpoints=1,
+                   bbox_to_anchor=(0.5, 1.12),
+                   ncol=3, fancybox=True, shadow=True)
+    if note:
+        plt.savefig(results + os.sep +
+                    'all_dope_profile_{0}_{1}_{2}.svg'
+                    .format(sessionid, "_".join(pdb_codes), note))
+    else:
+        plt.savefig(results + os.sep +
+                    'all_dope_profile_{0}_{1}.svg'.format(sessionid,
+                                                      "_".join(pdb_codes)))
+    plt.clf()
 
 
 def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
@@ -987,7 +1137,8 @@ def main():
         job_worker = get_parallel(int(args.thread))
         atm = compute_models(env, job_worker, args.alignment_file, pdb_codes,
                              pdb_files, args.model_name, args.model_quality,
-                             args.number_model)
+                             args.number_model, args.psipred,
+                             args.limit_confidence)
         save_general_data(atm, args.results, sessionid)
     if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
         summary_file = (args.results + "modeller_summary_"
@@ -1017,6 +1168,14 @@ def main():
         plot_DOPE_profile(list_template_profile_smooth,
                           list_model_profile_smooth, list_model_files,
                           sessionid, pdb_codes, args.results, "smooth")
+        # Plot DOPE profile
+        plot_DOPE_profile_all(list_template_profile, list_model_profile,
+                              list_model_files, sessionid, pdb_codes,
+                              args.results)
+        # Plot DOPE smooth profile
+        plot_DOPE_profile_all(list_template_profile_smooth,
+                              list_model_profile_smooth, list_model_files,
+                              sessionid, pdb_codes, args.results, "smooth")
         # Plot partial DOPE
         plot_partial_DOPE_profile(list_template_profile, list_model_profile,
                                   list_model_files, sessionid, pdb_codes,
