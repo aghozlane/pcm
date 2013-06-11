@@ -165,50 +165,57 @@ def get_arguments():
                                      "model_laccase.py ")
     parser.add_argument("-l", "--list_operations",
                         default=["modeling", "profile"], type=str, nargs='+',
-                        choices=["modeling", "profile", "verification"],
-                        help='Select operations.')
+                        choices=["modeling", "profile"],  # , "verification"
+                        help='Select the operations : modeling and/or profile')
+#                               + os.linesep
+#                               + '(verification not available yet)'))
     parser.add_argument('-f', '--multifasta_file', type=isfile,
-                        help='Fasta sequence.')
+                        help='Multifasta file with model and '
+                             'template sequences.')
     parser.add_argument('-i', '--alignment_file', type=isfile,
                         help='Alignment file in PIR format.')
     parser.add_argument('-a', '--alignment_software', type=str,
                         default="clustalo",
                         choices=["clustalw2", "clustalo", "mafft", "muscle",
                                  "t_coffee"],
-                        help="Indicate the software that should be used to "
+                        help="Indicates the software that should be used to "
                         "align sequences.")
+    parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
+                        help="List of pdb files or codes to use as template.")
+    parser.add_argument('-e', '--model_name', type=str,
+                        help='Code of the sequence to modelize.')
+    parser.add_argument('-g', '--path_alignment', type=isdir,
+                        default=local_path,
+                        help='Path to the alignment software.')
+    parser.add_argument('-n', '--number_model', type=int, default=8,
+                        help='Number of model to produce.')
+    parser.add_argument('-q', '--model_quality', type=str, default="fast",
+                        choices=["very_fast", "fast", "normal", "max"],
+                        help='Adjust the quality of the modeling.')
     parser.add_argument('-ht', '--add_heteroatom', type=int, default=0,
-                        help="Indicate the number of hetero-atom residue(s) "
+                        help="Indicates the number of hetero-atom residue(s) "
                         "that should be added to the alignment software.")
     parser.add_argument('-hm', '--heteroatom_models', default=[],
                         type=str, nargs='+',
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
                         "software.")
-    parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
-                        help="List of pdb files or codes.")
-    parser.add_argument('-e', '--model_name', type=str,
-                        help='Code of the sequence to modelize.')
-    parser.add_argument('-g', '--path_alignment', type=isdir,
-                        default=local_path, help='Path to t_coffee software.')
-    parser.add_argument('-n', '--number_model', type=int, default=8,
-                        help='Number of model to produce.')
-    parser.add_argument('-q', '--model_quality', type=str, default="fast",
-                        choices=["very_fast", "fast", "normal", "max"],
-                        help='Adjust the quality of the modeling.')
     parser.add_argument('-d', '--psipred', type=isfile,
                         help='Psipred file (*.psipass2).')
     parser.add_argument('-b', '--limit_confidence', type=int, default=7,
-                        help='Confidence limit for psipred.')
-    parser.add_argument('-s', '--structure_check', type=str,
-                        nargs='+', choices=["proq", "procheck", "verify3d"],
-                        help='Select phylogeny software.')
+                        help='Confidence limit for psipred (0-9).')
+#     parser.add_argument('-s', '--structure_check', type=str,
+#                         nargs='+', choices=["proq", "procheck", "verify3d"],
+#                         help='Select software for verification.'
+#                         '(Not available)')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
-                        help='Path to result directory.')
-    parser.add_argument('-k', '--path_check', type=isdir,
-                        nargs='+', help='Path to alignment software.')
+                        help='Path to result directory.'
+                        '(Default = current directory)')
+#     parser.add_argument('-k', '--path_check', type=isdir,
+#                         nargs='+', help='Path to alignment software.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
-                        help='Number of thread.')
+                        help='Number of thread '
+                        '(Default = all cpus available will be used).')
     parser.add_argument('-c', '--config', type=isfile,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
