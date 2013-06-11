@@ -166,7 +166,8 @@ def get_arguments():
     parser.add_argument("-l", "--list_operations",
                         default=["modeling", "profile"], type=str, nargs='+',
                         choices=["modeling", "profile"],  # , "verification"
-                        help='Select the operations : modeling and/or profile')
+                        help='Select the operations : modeling and/or profile '
+                        '(default : both modeling and profile are done)')
 #                               + os.linesep
 #                               + '(verification not available yet)'))
     parser.add_argument('-f', '--multifasta_file', type=isfile,
