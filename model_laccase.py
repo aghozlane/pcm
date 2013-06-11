@@ -209,8 +209,9 @@ def get_arguments():
 #                         help='Select software for verification.'
 #                         '(Not available)')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
-                        help='Path to result directory.'
-                        '(Default = current directory)')
+                        help='Path to result directory. (Default = current '
+                        'directory - prefer default due to modeller '
+                        'constraint)')
 #     parser.add_argument('-k', '--path_check', type=isdir,
 #                         nargs='+', help='Path to alignment software.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
