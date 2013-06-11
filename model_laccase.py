@@ -132,7 +132,6 @@ def isfile(path):
       Arguments:
           path: Path to the file
     """
-    # from Jonathan Barnoud
     if not os.path.isfile(path):
         if os.path.isdir(path):
             msg = "{0} is a directory".format(path)
@@ -237,7 +236,11 @@ def detect_cpus():
 
 
 def download_pdb(conf_data, pdb, results):
-    """
+    """Download PDB file
+     Arguments:
+        conf_data: Configuration dictionary
+        pdb: Name of the pdb file
+        results: Output directory
     """
     # Open our local file for writing
     outfilename = results + pdb + ".pdb"
@@ -256,7 +259,9 @@ def download_pdb(conf_data, pdb, results):
 
 
 def get_pdb(conf_data, pdb_list, results):
-    """
+    """Check pdb extension
+     Arguments:
+        conf_data: Configuration dictionary
     """
     pdb_codes = []
     pdb_files = []
@@ -264,6 +269,7 @@ def get_pdb(conf_data, pdb_list, results):
         if pdb.endswith('.pdb') and os.path.isfile(pdb):
             pdb_files += [pdb]
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
+        # Dowload corresponding pdb
         else:
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
             pdb_files += [download_pdb(conf_data,
@@ -292,6 +298,15 @@ def run_command(cmd):
 def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
                   output, thread):
     """Set the software command
+     Arguments:
+         build_command: Command
+         path_soft: Path to the alignment software
+         multifasta_file: Path to the multifasta file
+         pdb_files: List of PDB files
+         output: Output path
+         thread: Number of thread
+     Returns:
+      Command to execute.
     """
     print(build_command, file=sys.stderr)
     build_command = build_command.replace('%path_soft', path_soft)
@@ -307,7 +322,12 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
 
 
 def check_format(aln_data, pdb_codes):
-    """
+    """Check the pir file format
+     Arguments:
+      aln_data: Alignment read file
+      pdb_codes: List of pdb
+     Returns:
+      Status of the format and extraction result
     """
     ide = ""
     status = True
@@ -357,6 +377,12 @@ def check_format(aln_data, pdb_codes):
 def adjust_format(aln_pir_file, data_dict, pdb_codes,
                   add_heteroatom, heteroatom_models):
     """Correct pir format and add heteroatom in the alignment
+     Arguments:
+      aln_pir_file: 
+      data_dict:
+      pdb_codes:
+      add_heteroatom: 
+      heteroatom_models:
     """
     output_file = (os.path.dirname(aln_pir_file) + os.sep +
                    os.path.basename(aln_pir_file).split(".")[0]
@@ -433,6 +459,8 @@ def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
 
 def get_fasta_data(aln_fasta_file):
     """Extract fasta data
+     Arguments:
+       aln_fasta_file: Path to the fasta file
     """
     head = ""
     data_fasta = {}
@@ -495,7 +523,7 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
 def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                   alignment_software, path_soft, add_heteroatom,
                   heteroatom_models, thread, results):
-    """Compute alignment and adjust pir information
+    """Compute alignment and adjust PIR information
     """
     aln_pir_file = (results + alignment_software + "_" +
                     str(os.getpid()) + "_aln.pir")
@@ -523,7 +551,10 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
 
 
 def get_model(aln_file, pdb_codes):
-    """
+    """Get the model
+     Arguments:
+      aln_data: Alignment read file
+      pdb_codes: List of PDB
     """
     regex = re.compile("^>\w+;([\w-]+)")
     model = None
@@ -546,6 +577,8 @@ def get_model(aln_file, pdb_codes):
 
 def get_environment(pdb_files):
     """Set Modeller environment parameters
+     Arguments:
+      pdb_files: List of PDB files
     """
     env = environ(restyp_lib_file="${LIB}/restyp.lib")
     # Set PDB directory
@@ -558,31 +591,15 @@ def get_environment(pdb_files):
     return env
 
 
-def get_parallel(thread):
+def get_parallel(process):
     """Start modeling slave
+     Arguments:
+      thread: Number of process to launch
     """
     job_worker = job()
-    for i in xrange(0, thread):
+    for i in xrange(0, process):
         job_worker.append(local_slave())
     return job_worker
-
-
-# class MyModel(automodel):
-#     def special_restraints(self, aln):
-#         rsr = self.restraints
-#         rsr.add(secondary_structure.strand(self.residue_range('1:', '6:')))
-#         rsr.add(secondary_structure.strand(self.residue_range('9:', '14:')))
-#         for struct in psipred_result:
-#             # Constrain all residues to be alpha-helical
-#             if(struct[0] == "H"):
-#                 rsr.add(secondary_structure.alpha(
-#                     self.residue_range("{0}:".format(struct[1]),
-#                                        "{0}:".format(struct[2]))))
-#             # Constrain all residues to be beta-strand
-#             elif(struct[0] == "E"):
-#                 rsr.add(secondary_structure.strand(
-#                     self.residue_range("{0}:".format(struct[1]),
-#                                        "{0}:".format(struct[2]))))
 
 
 def load_psipred(psipred_file):
@@ -592,7 +609,6 @@ def load_psipred(psipred_file):
     pred = []
     regex_conf = re.compile("^Conf:\s+([0-9]+)")
     regex_pred = re.compile("^Pred:\s+([ECH]+)")
-#     regex_aa = re.compile("^AA:\s+([A-Z]+)")
     try:
         with open(psipred_file) as psipred:
             for line in psipred:
@@ -610,7 +626,7 @@ def load_psipred(psipred_file):
 
 
 def cluster_psipred(conf, pred, limit_confidence):
-    """
+    """Clusterize psipred data
     """
     psipred_clusters = []
     struct = None
@@ -647,32 +663,6 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
                         knowns=pdb_codes, sequence=model_name,
                         assess_methods=[assess.GA341, assess.DOPE,
                                         assess.normalized_dope])
-    # Load psipred
-#     if(psipred):
-#         conf, pred = load_psipred(psipred)
-#         psipred_result = cluster_psipred(conf, pred, limit_confidence)
-#         rsr = atm.restraints
-#         rsr.add(secondary_structure.strand(atm.residue_range(’1:’, ’6:’)))
-#         rsr.add(secondary_structure.strand(atm.residue_range(’9:’, ’14:’)))
-
-#         for struct in psipred_result:
-#             print(struct)
-#             # Constrain all residues to be alpha-helical
-#             if(struct[0] == "H"):
-#     #                 atm.restraints.add(
-#                 rsr.add(
-#                     secondary_structure.alpha(atm.residue_range("{0}:".format(struct[1]),
-#                                                                 "{0}:".format(struct[2]))))
-#             # Constrain all residues to be beta-strand
-#             elif(struct[0] == "E"):
-#                 rsr.add(
-#                     secondary_structure.strand(atm.residue_range("{0}:".format(struct[1]),
-#                                                                 "{0}:".format(struct[2]))))
-# #                 print(atm.residue_range(struct[1], struct[2]))
-# #                 atm.restraints.add(
-# #                     secondary_structure.strand(atm.residue_range(struct[1],
-# #                                                                  struct[2])))
-
     # Indicate number of template and model
     atm.starting_model = 1
     atm.ending_model = int(number_model)
@@ -695,8 +685,6 @@ def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
         # Very thorough VTFM optimization
         atm.library_schedule = autosched.slow
         atm.max_var_iterations = 300
-
-
     # Start modeling
     atm.make()
     return atm
@@ -786,10 +774,6 @@ def compute_profile(data):
     pdb = complete_pdb(env, data[0])
     # all atom selection
     s = selection(pdb)
-    # profile result
-#     s.assess_dope(output='ENERGY_PROFILE NO_REPORT', file=data[1],
-#                   normalize_profile=False, smoothing_window=15)
-#     return get_profile(data[1], aln[os.path.basename(data[0]).split(".")[0]])
     # Energy profile
     profile = s.get_dope_profile()
     profile.write_to_file(".".join(os.path.basename(data[0]).split(".")[:-1])
@@ -927,6 +911,13 @@ def plot_DOPE_profile_all(list_template, list_model, list_model_files,
 def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
                               sessionid, pdb_codes, results):
     """Divide the protein in two side and plot dope
+       Arguments:
+        list_template: List of template
+        list_model: List of model
+        list_model_files: List of model files
+        sessionid: Id number
+        pdb_codes: List of PDB codes
+        results: Output path
     """
     # Plot templates
     for i in xrange(len(list_template)):
@@ -970,7 +961,10 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
 
 
 def compute_delta_DOPE(template_profile, list_model_profile):
-    """
+    """Compute delta DOPE
+     Arguments:
+      template_profile:
+      list_model_profile:
     """
     delta = []
     for model_profile in list_model_profile:
@@ -993,6 +987,12 @@ def compute_delta_DOPE(template_profile, list_model_profile):
 def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
                             sessionid, results, template_pdb):
     """Plot delta dope profile
+      Arguments:
+        list_delta_dope: List of delta dope
+        list_model_files: List of model files
+        sessionid: Id number
+        results: Output path
+        template_pdb: List of template PDB file
     """
     # Plot models
     for i in xrange(len(list_delta_dope)):
@@ -1014,13 +1014,17 @@ def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
 
 def get_unique(seq):
     """Get unique elements with order preserving
+      Arguments:
+       seq: List of elements
     """
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
 
 
 def get_sequence(pdb_file):
-    """
+    """Extract PDB file sequence
+     Arguments:
+      pdb_file: Path to the PDB file
     """
     seqpdb = []
     try:
@@ -1039,7 +1043,13 @@ def get_sequence(pdb_file):
 
 def save_delta_DOPE_profile(list_model_files, list_model_profile,
                             list_delta_dope, results, template_pdb):
-    """
+    """Write delta DOPE profile
+     Arguments:
+        list_model_files: List of model files
+        list_model_profile: List of profile
+        list_delta_dope: List of delta dope
+        results: Output path
+        template_pdb: List of template PDB file
     """
     try:
         for mod in list_model_files:
@@ -1067,6 +1077,8 @@ def save_delta_DOPE_profile(list_model_files, list_model_profile,
 
 def load_summary(summary_file):
     """Load summary data
+     Arguments:
+      summary_file: File describing Dope energy
     """
     summary_data = {}
     try:
@@ -1087,10 +1099,11 @@ def load_summary(summary_file):
 
 def run_verification(conf_data, structure_check):
     """
+     Arguments:
+      conf_data: Configuration dictionary
+      structure_check:
     """
     raise NotImplemented
-#    for soft in structure_check:
-#        conf_data[soft]
 
 
 #==============================================================
