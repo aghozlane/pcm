@@ -12,6 +12,14 @@
 #    http://www.gnu.org/licenses/gpl-3.0.html
 
 """Run modeling with modeller."""
+__author__ = "Amine Ghozlane"
+__copyright__ = "Copyright 2007, The Cogent Project"
+__credits__ = ["Joseph Rebehmed", "Alexandre G. de Brevern"]
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Amine Ghozlane"
+__email__ = "amine.ghozlane@inserm.fr"
+__status__ = "Developpement"
 
 from __future__ import print_function
 import argparse
@@ -33,8 +41,8 @@ try:
     MODELLER = True
 except ImportError:
     MODELLER = False
-    print("Could not import modeller\nNo modeling will be available",
-          file=sys.stderr)
+    print("Could not import modeller.{0}No modeling "
+          "will be available".format(os.linesep), file=sys.stderr)
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -43,8 +51,8 @@ try:
     MATPLOTLIB = True
 except ImportError:
     MATPLOTLIB = False
-    print("Could not import matplotlib.\n"
-      "The statistic measures won't be drawn.", file=sys.stderr)
+    print("Could not import matplotlib.{0}The statistic measures "
+          "won't be drawn.".format(os.linesep), file=sys.stderr)
 
 class ModelingConfig:
     """Configure alignment.
@@ -117,7 +125,7 @@ class ModelingConfig:
                         "-outfile %output -output pir_aln  "
                         "-n_core %proc".format(os.sep))
         # -mode 3dcoffee -template_file %pdb
-        # Write data
+        # Write configuration data
         try:
             # Writing our configuration file to 'example.cfg'
             with open(self.phyconfig_file, 'wt') as configfile:
@@ -162,7 +170,7 @@ def get_arguments():
     local_path = ".{0}".format(os.sep)
     # Parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, usage=
-                                     "model_laccase.py ")
+                                     "{0} -h".format(sys.argv[0]))
     parser.add_argument("-l", "--list_operations",
                         default=["modeling", "profile"], type=str, nargs='+',
                         choices=["modeling", "profile"],  # , "verification"
@@ -271,14 +279,17 @@ def get_pdb(conf_data, pdb_list, results):
     """Check pdb extension
      Arguments:
         conf_data: Configuration dictionary
+        pdb_list: List of PDB
+        results: Output directory
     """
     pdb_codes = []
     pdb_files = []
     for pdb in pdb_list:
+        # Correspond to a PDB file
         if pdb.endswith('.pdb') and os.path.isfile(pdb):
             pdb_files += [pdb]
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-        # Dowload corresponding pdb
+        # Download corresponding pdb
         else:
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
             pdb_files += [download_pdb(conf_data,
@@ -334,7 +345,7 @@ def check_format(aln_data, pdb_codes):
     """Check the pir file format
      Arguments:
       aln_data: Alignment read file
-      pdb_codes: List of pdb
+      pdb_codes: List of PDB
      Returns:
       Status of the format and extraction result
     """
@@ -387,11 +398,11 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes,
                   add_heteroatom, heteroatom_models):
     """Correct pir format and add heteroatom in the alignment
      Arguments:
-      aln_pir_file: 
-      data_dict:
-      pdb_codes:
-      add_heteroatom: 
-      heteroatom_models:
+      aln_pir_file: Path to the PIR file
+      data_dict: Dictionary containing alignment data
+      pdb_codes: List of PDB
+      add_heteroatom: Number of heteroatom
+      heteroatom_models: List of model for which heteroatom should be added
     """
     output_file = (os.path.dirname(aln_pir_file) + os.sep +
                    os.path.basename(aln_pir_file).split(".")[0]
@@ -446,17 +457,22 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes,
 
 
 def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
-    """Run checking of pir alignment file
+    """Run checking of PIR alignment file
+     Arguments:
+      aln_pir_file: Path to the PIR file
+      pdb_codes: List of PDB
+      add_heteroatom: Number of heteroatom
+      heteroatom_models: List of model for which heteroatom should be added
     """
     try:
         if not aln_pir_file.endswith('.pir'):
             print("Warning : The alignment file is expected "
-                  "to be in pir format", file=sys.stderr)
+                  "to be in PIR format", file=sys.stderr)
         with open(aln_pir_file, "rt") as aln_pir:
             aln_data = aln_pir.readlines()
         status, data_dict = check_format(aln_data, pdb_codes)
         if not status or add_heteroatom > 0:
-            print("Try to correct pir alignment format.", file=sys.stderr)
+            print("Try to correct PIR alignment format.", file=sys.stderr)
             aln_pir_file = adjust_format(aln_pir_file, data_dict, pdb_codes,
                                          add_heteroatom, heteroatom_models)
     except AssertionError:
@@ -493,6 +509,12 @@ def get_fasta_data(aln_fasta_file):
 def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
                    add_heteroatom, heteroatom_models):
     """Write new pir alignment
+     Arguments:
+      aln_pir_file: Path to the PIR file
+      data_dict: Dictionary containing alignment data
+      pdb_codes: List of PDB
+      add_heteroatom: Number of heteroatom
+      heteroatom_models: List of model for which heteroatom should be added
     """
     hetatm_flag = True
     hetatm = ""
@@ -501,7 +523,7 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
     try:
         with open(aln_pir_file, "wt") as aln_pir:
             for element in data_fasta:
-                aln_pir.write(">P1;{0}\n".format(element))
+                aln_pir.write(">P1;{0}{1}".format(element, os.linesep))
                 type_data = "sequence"
                 # Identify sequences with a pdb structure associated
                 if element in pdb_codes:
@@ -516,14 +538,15 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
                     aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
                                 type_data, element,
                                 len(sequence) + add_heteroatom)
-                                + ": "*4 + "\n")
-                    aln_pir.write("{0}{1}*\n".format(data_fasta[element],
-                                                     hetatm))
+                                + ": "*4 + os.linesep)
+                    aln_pir.write("{0}{1}*{2}".format(data_fasta[element],
+                                                     hetatm, os.linesep))
                 else:
                     aln_pir.write("{0}:{1}:1 :A:{2}:A"
                                   .format(type_data, element, len(sequence))
-                                  + ": "*4 + "\n")
-                    aln_pir.write("{0}*\n".format(data_fasta[element]))
+                                  + ": "*4 + os.linesep)
+                    aln_pir.write("{0}*{1}".format(data_fasta[element],
+                                                  os.linesep))
                 hetatm_flag = True
     except IOError:
         sys.exit("Error cannot open {0}".format(aln_pir_file))
@@ -533,6 +556,18 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                   alignment_software, path_soft, add_heteroatom,
                   heteroatom_models, thread, results):
     """Compute alignment and adjust PIR information
+     Arguments:
+      conf_data:
+      multifasta_file: Path to the multifasta file
+      pdb_codes: List of PDB
+      pdb_files: List of PDB files
+      alignment_software:
+      path_soft:
+      add_heteroatom: Number of heteroatom
+      heteroatom_models: List of model for which heteroatom should be added
+      thread:
+      results:
+     Returns:
     """
     aln_pir_file = (results + alignment_software + "_" +
                     str(os.getpid()) + "_aln.pir")
@@ -564,6 +599,7 @@ def get_model(aln_file, pdb_codes):
      Arguments:
       aln_data: Alignment read file
       pdb_codes: List of PDB
+     Returns:
     """
     regex = re.compile("^>\w+;([\w-]+)")
     model = None
@@ -603,7 +639,9 @@ def get_environment(pdb_files):
 def get_parallel(process):
     """Start modeling slave
      Arguments:
-      thread: Number of process to launch
+      process: Number of process to launch
+     Returns:
+      List of worker
     """
     job_worker = job()
     for i in xrange(0, process):
@@ -612,7 +650,12 @@ def get_parallel(process):
 
 
 def load_psipred(psipred_file):
-    """
+    """Load psipred data
+     Arguments:
+      psipred_file: Path to psipred file
+     Returns:
+      conf: List of confidence level associated to the conformation
+      pred: List of residue conformations (helix, strand)
     """
     conf = []
     pred = []
@@ -635,7 +678,13 @@ def load_psipred(psipred_file):
 
 
 def cluster_psipred(conf, pred, limit_confidence):
-    """Clusterize psipred data
+    """Clusterize psipred data according to the threshold
+     Arguments:
+      conf: List of confidence level associated to the conformation
+      pred: List of residue conformations (helix, strand)
+      limit_confidence: Confidence threshold
+     Returns:
+      psipred_clusters:
     """
     psipred_clusters = []
     struct = None
@@ -711,7 +760,11 @@ def histplot(data, label, result_data):
 
 
 def summary_data(data, results, sessionid):
-    """
+    """Write summary results
+     Arguments:
+      data:
+      results: Output path
+      sessionid: ID number
     """
     summary_file = (results + "modeller_summary_" + str(sessionid) + ".csv")
     try:
@@ -730,6 +783,10 @@ def summary_data(data, results, sessionid):
 
 def save_general_data(atm, results, sessionid):
     """Write general parameters of the produced models
+     Arguments:
+       atm:
+       results: Output path
+       sessionid: ID number
     """
     # Get converged models
     ok_models = filter(lambda x: x['failure'] is None, atm.outputs)
@@ -758,7 +815,10 @@ def insert_gaps(vals, seq):
 
 def get_profile(profile_file, seq):
     """Read `profile_file` into a Python array, and add gaps corresponding to
-       the alignment sequence `seq`."""
+       the alignment sequence `seq`.
+     Arguments:
+     Returns:
+    """
     # Read all non-comment and non-blank lines from the file:
     vals = []
     try:
@@ -1157,26 +1217,30 @@ def main():
     if MODELLER and "modeling" in args.list_operations:
         # Use several CPUs in a parallel job on this machine
         job_worker = get_parallel(int(args.thread))
+        # Start Modelling
         atm = compute_models(env, job_worker, args.alignment_file, pdb_codes,
                              pdb_files, args.model_name, args.model_quality,
                              args.number_model, args.psipred,
                              args.limit_confidence)
         save_general_data(atm, args.results, sessionid)
     if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
+        # Summary file reference
         summary_file = (args.results + "modeller_summary_"
                         + str(sessionid) + ".csv")
+        # List of models
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)
                       if os.path.isfile(args.model_name + ".B"
                                         + str(99990000 + i) + ".pdb")]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
-        # Load alignment
+        # Load template profile
         (list_template_profile,
          list_template_profile_smooth) = load_profiles(pdb_files,
                                                        pdb_codes,
                                                        args.alignment_file,
                                                        args.thread,
                                                        args.results)
+        # Load model profile
         (list_model_profile,
          list_model_profile_smooth) = load_profiles(list_model_files,
                                                     list_model,
