@@ -42,14 +42,16 @@ def get_numstring(val, maxval):
 def renum_pdb(pdb_file, activity):
     """
     """
+    res = 0
     num = 0
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
                 aa = line[17:20]
-                atom = line[13:16]
+                newres = line[22:26]
                 field = line[0:4]
-                if(atom == "N  "):
+                if(newres != res):
+                    res = newres
                     num += 1
                     if activity == "sequence" and field == "ATOM":
                         sys.stdout.write(seqdict[aa])

@@ -12,14 +12,7 @@
 #    http://www.gnu.org/licenses/gpl-3.0.html
 
 """Run modeling with modeller."""
-__author__ = "Amine Ghozlane"
-__copyright__ = "Copyright 2007, The Cogent Project"
-__credits__ = ["Joseph Rebehmed", "Alexandre G. de Brevern"]
-__license__ = "GPL"
-__version__ = "1.0.0"
-__maintainer__ = "Amine Ghozlane"
-__email__ = "amine.ghozlane@inserm.fr"
-__status__ = "Developpement"
+
 
 from __future__ import print_function
 import argparse
@@ -31,7 +24,9 @@ import subprocess
 import re
 import csv
 import math
+import textwrap
 import multiprocessing as mp
+
 try:
     from modeller import *
     from modeller.parallel import *
@@ -54,13 +49,24 @@ except ImportError:
     print("Could not import matplotlib.{0}The statistic measures "
           "won't be drawn.".format(os.linesep), file=sys.stderr)
 
+
+__author__ = "Amine Ghozlane"
+__copyright__ = "Copyright 2013, University of Paris VII"
+__credits__ = ["Amine Ghozlane", "Joseph Rebehmed", "Alexandre G. de Brevern"]
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Amine Ghozlane"
+__email__ = "amine.ghozlane@inserm.fr"
+__status__ = "Developpement"
+
+
 class ModelingConfig:
     """Configure alignment.
     """
 
     def __init__(self, config_file, results):
         """Instantiate ModelingConfig object
-           Arguments:
+           :Parameters:
             config_file: Configuration file path
             results: Result path
         """
@@ -137,7 +143,7 @@ class ModelingConfig:
 
 def isfile(path):
     """Check if path is an existing file.
-      Arguments:
+      :Parameters:
           path: Path to the file
     """
     if not os.path.isfile(path):
@@ -151,7 +157,7 @@ def isfile(path):
 
 def isdir(path):
     """Check if path is an existing file.
-      Arguments:
+      :Parameters:
           path: Path to the file
     """
     if not os.path.isdir(path):
@@ -161,6 +167,22 @@ def isdir(path):
             msg = "{0} does not exist.".format(path)
         raise argparse.ArgumentTypeError(msg)
     return path
+
+
+def islimit(value):
+    """Check if value is in confidence limit.
+      :Parameters:
+          conf_value: Confidence value 
+    """
+    try:
+        conf_value = int(value)
+        if conf_value < 0 or conf_value > 9:
+            raise argparse.ArgumentTypeError("Psipred confidence threshold "
+                                             "must be between 0-9")
+    except ValueError:
+        raise argparse.ArgumentTypeError("Value \"{0}\" is not"
+                                         " an integer".format(value))
+    return conf_value
 
 
 def get_arguments():
@@ -211,16 +233,21 @@ def get_arguments():
                         "software.")
     parser.add_argument('-d', '--psipred', type=isfile,
                         help='Psipred file (*.psipass2).')
-    parser.add_argument('-b', '--limit_confidence', type=int, default=7,
-                        help='Confidence limit for psipred (0-9).')
-#     parser.add_argument('-s', '--structure_check', type=str,
-#                         nargs='+', choices=["proq", "procheck", "verify3d"],
-#                         help='Select software for verification.'
-#                         '(Not available)')
+    parser.add_argument('-b', '--limit_confidence', type=islimit, default=7,
+                        help='Confidence limit for psipred'
+                        '(0-9 - default = >7).')
+    parser.add_argument('-s', '--structure_check', type=str,
+                         nargs='+', choices=["procheck", "verify3d"],
+                         help='Select software for verification.')
+    parser.add_argument('-sb', '--number_best', type=int,
+                         help='Select number of models for verification ().')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
-                        'directory - prefer default due to modeller '
+                        'directory is prefered default due to modeller '
                         'constraint)')
+    parser.add_argument('-da', '--disable_autocorrect', action='store_true',
+                        default=False,
+                        help='Disable the autocorrect of the multifasta file')
 #     parser.add_argument('-k', '--path_check', type=isdir,
 #                         nargs='+', help='Path to alignment software.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
@@ -254,7 +281,7 @@ def detect_cpus():
 
 def download_pdb(conf_data, pdb, results):
     """Download PDB file
-     Arguments:
+     :Parameters:
         conf_data: Configuration dictionary
         pdb: Name of the pdb file
         results: Output directory
@@ -270,14 +297,14 @@ def download_pdb(conf_data, pdb, results):
     except urllib2.URLError, e:
         print ("URL Error:", e.reason, pdb, file=sys.stderr)
     except IOError:
-        print("Something went wrong with %s" % outfilename,
+        print("Something went wrong with {0}".format(outfilename),
               file=sys.stderr)
     return outfilename
 
 
 def get_pdb(conf_data, pdb_list, results):
     """Check pdb extension
-     Arguments:
+     :Parameters:
         conf_data: Configuration dictionary
         pdb_list: List of PDB
         results: Output directory
@@ -285,22 +312,24 @@ def get_pdb(conf_data, pdb_list, results):
     pdb_codes = []
     pdb_files = []
     for pdb in pdb_list:
+
         # Correspond to a PDB file
-        if pdb.endswith('.pdb') and os.path.isfile(pdb):
-            pdb_files += [pdb]
+        if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
+            pdb_files += [download_pdb(
+                         conf_data,
+                         ".".join(os.path.basename(pdb).split(".")[:-1]),
+                         results)]
         # Download corresponding pdb
         else:
-            pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            pdb_files += [download_pdb(conf_data,
-                                       os.path.basename(pdb).split(".")[0],
-                                       results)]
+            pdb_codes += [".".join(os.path.basename(pdb).split(".")[:-1])]
+            pdb_files += [pdb]
     return pdb_codes, pdb_files
 
 
 def run_command(cmd):
     """Run command
-      Arguments:
+      :Parameters:
           cmd: Command to run
     """
     try:
@@ -318,7 +347,7 @@ def run_command(cmd):
 def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
                   output, thread):
     """Set the software command
-     Arguments:
+     :Parameters:
          build_command: Command
          path_soft: Path to the alignment software
          multifasta_file: Path to the multifasta file
@@ -343,7 +372,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
 
 def check_format(aln_data, pdb_codes):
     """Check the pir file format
-     Arguments:
+     :Parameters:
       aln_data: Alignment read file
       pdb_codes: List of PDB
      Returns:
@@ -358,7 +387,7 @@ def check_format(aln_data, pdb_codes):
     regex_suite = (re.compile(r"^>" + "|".join([i + ";([\w-]+)"for i in ens])),
                    re.compile(r"^([sequence|structureX]:[\w-]+" + ":\S+"*8
                               + ")"),
-                   re.compile(r"([\w*-]+\n)"))
+                   re.compile(r"([\w*-]+{0})".format(os.linesep)))
     for line in aln_data:
         # Match title
         if count in (0, 2):
@@ -377,8 +406,8 @@ def check_format(aln_data, pdb_codes):
                 count += 1
             else:
                 print("Warning: next line does not correspond to subtitle "
-                      "format required for modeller :\n{0}".format(line),
-                      file=sys.stderr)
+                      "format required for modeller"
+                      " :{0}{1}".format(os.linesep, line), file=sys.stderr)
                 count += 1
                 status = False
         # Match Sequence
@@ -386,7 +415,8 @@ def check_format(aln_data, pdb_codes):
             match = regex_suite[count].match(line)
             if not match:
                 print("Warning: next line does not correspond to a correct "
-                      "protein sequence :\n{0}".format(line), file=sys.stderr)
+                      "protein sequence :{0}{1}".format(os.linesep, line),
+                      file=sys.stderr)
                 status = False
             else:
                 data[ide][1] += match.group(1)
@@ -394,13 +424,14 @@ def check_format(aln_data, pdb_codes):
     return status, data
 
 
-def adjust_format(aln_pir_file, data_dict, pdb_codes,
-                  add_heteroatom, heteroatom_models):
+def adjust_PIR_format(aln_pir_file, data_dict, pdb_codes, pdb_files,
+                      add_heteroatom, heteroatom_models):
     """Correct pir format and add heteroatom in the alignment
-     Arguments:
+     :Parameters:
       aln_pir_file: Path to the PIR file
       data_dict: Dictionary containing alignment data
       pdb_codes: List of PDB
+      pdb_files: List of PDB files
       add_heteroatom: Number of heteroatom
       heteroatom_models: List of model for which heteroatom should be added
     """
@@ -415,10 +446,11 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes,
     try:
         with open(output_file, "wt") as aln_pir:
             for element in data_dict:
+                pdb_start_posit = 1
                 if(element not in heteroatom_models
                    and len(heteroatom_models) > 0):
                     het_atm_flag = False
-                aln_pir.write(">P1;{0}\n".format(element))
+                aln_pir.write(">P1;{0}{1}".format(element, os.linesep))
                 if data_dict[element][0] and not add_heteroatom:
                     aln_pir.write(data_dict[element][0])
                 else:
@@ -427,28 +459,38 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes,
                     if element in pdb_codes:
                         type_data = "structureX"
                         structure_present = True
+                        pdb_index = pdb_codes.index(element)
+                        # Identify start postion
+                        pdb_start_posit = get_start_position(
+                                            pdb_files[pdb_index])
                     sequence = data_dict[element][1].replace("-", "")
-                    sequence = sequence.replace("\n", "")
+                    sequence = sequence.replace(os.linesep, "")
                     sequence = sequence.replace("*", "")
                     if het_atm_flag:
-                        aln_pir.write("{0}:{1}:1 :A:{2}:A"
+                        aln_pir.write("{0}:{1}:{2} :A:{3}:A"
                                       .format(type_data, element,
-                                              len(sequence) + add_heteroatom)
-                                      + ": "*4 + "\n")
+                                              pdb_start_posit,
+                                              pdb_start_posit - 1
+                                              + len(sequence)
+                                              + add_heteroatom)
+                                      + ": "*4 + os.linesep)
                     else:
-                        aln_pir.write("{0}:{1}:1 :A:{2}:A"
+                        aln_pir.write("{0}:{1}:{2} :A:{3}:A"
                                       .format(type_data, element,
-                                              len(sequence))
-                                      + ": "*4 + "\n")
+                                              pdb_start_posit,
+                                              pdb_start_posit - 1
+                                              + len(sequence))
+                                      + ": "*4 + os.linesep)
                 end_aln_posit = data_dict[element][1].index("*")
                 if het_atm_flag:
-                    aln_pir.write("{0}{1}{2}\n".format(
+                    aln_pir.write("{0}{1}{2}{3}".format(
                         data_dict[element][1][0:end_aln_posit],
-                        het_atm, data_dict[element][1][end_aln_posit:]))
+                        het_atm, data_dict[element][1][end_aln_posit:],
+                        os.linesep))
                 else:
-                    aln_pir.write("{0}{1}\n".format(
+                    aln_pir.write("{0}{1}{2}".format(
                         data_dict[element][1][0:end_aln_posit],
-                        data_dict[element][1][end_aln_posit:]))
+                        data_dict[element][1][end_aln_posit:], os.linesep))
                 het_atm_flag = True
     except IOError:
         sys.exit("Error cannot open {0}".format())
@@ -456,9 +498,10 @@ def adjust_format(aln_pir_file, data_dict, pdb_codes,
     return output_file
 
 
-def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
+def check_pir(aln_pir_file, pdb_codes, pdb_files, add_heteroatom,
+              heteroatom_models):
     """Run checking of PIR alignment file
-     Arguments:
+     :Parameters:
       aln_pir_file: Path to the PIR file
       pdb_codes: List of PDB
       add_heteroatom: Number of heteroatom
@@ -473,8 +516,9 @@ def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
         status, data_dict = check_format(aln_data, pdb_codes)
         if not status or add_heteroatom > 0:
             print("Try to correct PIR alignment format.", file=sys.stderr)
-            aln_pir_file = adjust_format(aln_pir_file, data_dict, pdb_codes,
-                                         add_heteroatom, heteroatom_models)
+            aln_pir_file = adjust_PIR_format(aln_pir_file, data_dict,
+                                             pdb_codes, pdb_files,
+                                             add_heteroatom, heteroatom_models)
     except AssertionError:
         sys.exit("All PDB structures must be referenced in the alignment.")
     except IOError:
@@ -484,13 +528,13 @@ def check_pir(aln_pir_file, pdb_codes, add_heteroatom, heteroatom_models):
 
 def get_fasta_data(aln_fasta_file):
     """Extract fasta data
-     Arguments:
+     :Parameters:
        aln_fasta_file: Path to the fasta file
     """
     head = ""
     data_fasta = {}
     regex_head = re.compile(r"^>([\w-]+)")
-    regex_sequence = re.compile(r"([\w*-]+\n)")
+    regex_sequence = re.compile(r"([\w*-]+{0})".format(os.linesep))
     try:
         with open(aln_fasta_file, "rt") as aln_fasta:
             for i in aln_fasta:
@@ -506,10 +550,31 @@ def get_fasta_data(aln_fasta_file):
     return data_fasta
 
 
-def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
+def get_start_position(pdb_file):
+    """
+    """
+    pdb_start_posit = 0
+    try:
+        with open(pdb_file, "rt") as pdb:
+            for line in pdb:
+                resnum = line[22:26]
+                field = line[0:4]
+                if(field == "ATOM"):
+                    pdb_start_posit = int(resnum)
+                    break
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_file))
+    except ValueError:
+        sys.exit("Error cannot identify the first residue number"
+                 " in \"{0}\"".format(pdb))
+    assert(pdb_start_posit != 0)
+    return pdb_start_posit
+
+
+def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                    add_heteroatom, heteroatom_models):
     """Write new pir alignment
-     Arguments:
+     :Parameters:
       aln_pir_file: Path to the PIR file
       data_dict: Dictionary containing alignment data
       pdb_codes: List of PDB
@@ -523,57 +588,178 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes,
     try:
         with open(aln_pir_file, "wt") as aln_pir:
             for element in data_fasta:
+                pdb_start_posit = 1
                 aln_pir.write(">P1;{0}{1}".format(element, os.linesep))
                 type_data = "sequence"
                 # Identify sequences with a pdb structure associated
                 if element in pdb_codes:
                     type_data = "structureX"
-                #
+                    pdb_index = pdb_codes.index(element)
+                    # Identify start postion
+                    pdb_start_posit = get_start_position(pdb_files[pdb_index])
+                # Check if we have to add heteroatom in the alignment for the
+                # current PDB
                 if (element not in heteroatom_models
                     and len(heteroatom_models) > 0):
                     hetatm_flag = False
                 sequence = data_fasta[element].replace("-", "")
-                sequence = sequence.replace("\n", "")
+                sequence = sequence.replace(os.linesep, "")
                 if hetatm_flag:
-                    aln_pir.write("{0}:{1}:1 :A:{2}:A".format(
-                                type_data, element,
-                                len(sequence) + add_heteroatom)
-                                + ": "*4 + os.linesep)
+                    aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}".format(
+                                type_data, element, pdb_start_posit,
+                                pdb_start_posit - 1 + len(sequence) +
+                                add_heteroatom, ": "*4, os.linesep))
                     aln_pir.write("{0}{1}*{2}".format(data_fasta[element],
                                                      hetatm, os.linesep))
                 else:
-                    aln_pir.write("{0}:{1}:1 :A:{2}:A"
-                                  .format(type_data, element, len(sequence))
-                                  + ": "*4 + os.linesep)
+                    aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}"
+                                  .format(type_data, element, pdb_start_posit,
+                                          pdb_start_posit - 1 + len(sequence),
+                                          ": "*4, os.linesep))
                     aln_pir.write("{0}*{1}".format(data_fasta[element],
                                                   os.linesep))
                 hetatm_flag = True
     except IOError:
         sys.exit("Error cannot open {0}".format(aln_pir_file))
+    except AssertionError:
+        sys.exit("Error cannot find start residue position "
+                 "in the pdb : {0}".format(pdb_files[pdb_index]))
+
+
+def get_multifasta_data(multifasta_file):
+    """
+    """
+    regex_head = re.compile("^>([\w-]+)")
+    regex_protein = re.compile("^([A-Za-z]+)")
+    multifasta_data = {}
+    with open(multifasta_file) as multifasta:
+        for line in multifasta:
+            match_head = regex_head.match(line)
+            match_protein = regex_protein.match(line)
+            if match_head:
+                head = match_head.group(1)
+                multifasta_data[head] = ""
+            elif match_protein:
+                multifasta_data[head] += match_protein.group(1)
+    return multifasta_data
+
+
+def get_pdb_sequence(pdb_file, seqdict):
+    """
+    """
+    pdb_seq = ""
+    res = 0
+    try:
+        with open(pdb_file, "rt") as pdb:
+            for line in pdb:
+                aa = line[17:20]
+                newres = line[22:26]
+                field = line[0:4]
+                if newres != res and field == "ATOM":
+                    pdb_seq += seqdict[aa]
+                    res = newres
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_file))
+    except TypeError:
+        print("Unknown residue \"{0}\" :{1}{2}".format(aa, os.linesep, line))
+    return pdb_seq
+
+
+def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
+                             wrong_pdb, results):
+    """Create a new multifasta
+    """
+    corrected_fasta_file = (results +
+                            ".".join(os.path.basename(
+                                        multifasta_file).split(".")[:-1])
+                            + "_corrected.fasta")
+    try:
+        with open(corrected_fasta_file, "wt") as corrected_fasta:
+            for head in multifasta_data:
+                print(head)
+                # PDB is missing in the multifasta
+                if head in wrong_pdb:
+                    print(pdb_seq[head])
+                    corrected_fasta.write(
+                        ">{0}{1}{2}{1}".format(
+                            head, os.linesep,
+                            "{0}".format(os.linesep).join(
+                                textwrap.wrap(pdb_seq[head], 80))))
+                # The line was correct
+                else:
+                    print("bouh")
+                    corrected_fasta.write(
+                        ">{0}{1}{2}{1}".format(
+                            head, os.linesep,
+                            "{0}".format(os.linesep).join(
+                                textwrap.wrap(multifasta_data[head], 80))))
+    except IOError:
+        sys.exit("Error cannot open {0}".format(corrected_fasta_file))
+    return corrected_fasta_file
+
+
+def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
+                     disable_autocorrect, results):
+    """Check multifasta
+    """
+    check_wrong = False
+    wrong_pdb = pdb_codes
+    pdb_seq = {}
+    # Check extension
+    if not multifasta_file.endswith("fasta"):
+        print("Warning :  the sequence are supposed to be "
+              "in fasta format", file=sys.stderr)
+    # Get multifasta data
+    multifasta_data = get_multifasta_data(multifasta_file)
+    # Check multifasta data and PDB
+    for head in multifasta_data:
+        try:
+            pdb_index = wrong_pdb.index(head)
+            pdb_seq[head] = get_pdb_sequence(pdb_files[pdb_index], seqdict)
+            # IF PDB is OK
+            print(pdb_seq[head])
+            print(multifasta_data[head])
+            if pdb_seq[head] == multifasta_data[head]:
+                wrong_pdb.pop(pdb_index)
+            else:
+                print("Warning : Amino-acid sequence in the PDB and in the "
+                      "multifasta file is different.", file=sys.stderr)
+                check_wrong = True
+        except ValueError:
+            pass
+    if len(wrong_pdb) != 0 and not check_wrong:
+        print("Warning : The multifasta file does not contain the sequence "
+              "of every PDB files.", file=sys.stderr)
+        check_wrong = True
+    # Autocorrect
+    if not disable_autocorrect and check_wrong:
+        print("Try to correct multifasta file.", file=sys.stderr)
+        multifasta_file = adjust_multifasta_format(multifasta_file,
+                                                   multifasta_data,
+                                                   pdb_seq, wrong_pdb,
+                                                   results)
+    return multifasta_file
 
 
 def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                   alignment_software, path_soft, add_heteroatom,
                   heteroatom_models, thread, results):
     """Compute alignment and adjust PIR information
-     Arguments:
-      conf_data:
+     :Parameters:
+      conf_data: Configuration dictionary
       multifasta_file: Path to the multifasta file
       pdb_codes: List of PDB
       pdb_files: List of PDB files
-      alignment_software:
-      path_soft:
+      alignment_software: Name of the alignment softwaire
+      path_soft: Path to alignment software
       add_heteroatom: Number of heteroatom
       heteroatom_models: List of model for which heteroatom should be added
-      thread:
-      results:
+      thread: Number of process
+      results: Output path
      Returns:
     """
     aln_pir_file = (results + alignment_software + "_" +
                     str(os.getpid()) + "_aln.pir")
-    if not multifasta_file.endswith("fasta"):
-        print("Warning :  the sequence are supposed to be "
-              "in fasta format", file=sys.stderr)
     # compute
     if alignment_software in ("t_coffee", "clustalw2"):
         run_command(replace_motif(conf_data.hdict[alignment_software],
@@ -586,17 +772,17 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
                                   path_soft, multifasta_file, pdb_files,
                                   aln_fasta_file, thread))
         data_fasta = get_fasta_data(aln_fasta_file)
-        write_pir_file(aln_pir_file, data_fasta, pdb_codes,
+        write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                        add_heteroatom, heteroatom_models)
     if alignment_software in ("t_coffee", "clustalw2"):
-        aln_pir_file = check_pir(aln_pir_file, pdb_codes,
+        aln_pir_file = check_pir(aln_pir_file, pdb_codes, pdb_files,
                                  add_heteroatom, heteroatom_models)
     return aln_pir_file
 
 
 def get_model(aln_file, pdb_codes):
     """Get the model
-     Arguments:
+     :Parameters:
       aln_data: Alignment read file
       pdb_codes: List of PDB
      Returns:
@@ -622,7 +808,7 @@ def get_model(aln_file, pdb_codes):
 
 def get_environment(pdb_files):
     """Set Modeller environment parameters
-     Arguments:
+     :Parameters:
       pdb_files: List of PDB files
     """
     env = environ(restyp_lib_file="${LIB}/restyp.lib")
@@ -638,7 +824,7 @@ def get_environment(pdb_files):
 
 def get_parallel(process):
     """Start modeling slave
-     Arguments:
+     :Parameters:
       process: Number of process to launch
      Returns:
       List of worker
@@ -651,7 +837,7 @@ def get_parallel(process):
 
 def load_psipred(psipred_file):
     """Load psipred data
-     Arguments:
+     :Parameters:
       psipred_file: Path to psipred file
      Returns:
       conf: List of confidence level associated to the conformation
@@ -661,6 +847,9 @@ def load_psipred(psipred_file):
     pred = []
     regex_conf = re.compile("^Conf:\s+([0-9]+)")
     regex_pred = re.compile("^Pred:\s+([ECH]+)")
+    if not psipred_file.endswith("psipass2"):
+        print("Warning :  the psipred file is supposed to be "
+              "in psipass2 format", file=sys.stderr)
     try:
         with open(psipred_file) as psipred:
             for line in psipred:
@@ -673,13 +862,14 @@ def load_psipred(psipred_file):
     except IOError:
         sys.exit("Error cannot open {0}".format(psipred_file))
     except ValueError:
-        sys.exit("There is text value in confidence line\n{0}".format(line))
+        sys.exit("There is a text value in confidence "
+                 "line : {0}{1}".format(os.linesep, line))
     return conf, pred
 
 
 def cluster_psipred(conf, pred, limit_confidence):
     """Clusterize psipred data according to the threshold
-     Arguments:
+     :Parameters:
       conf: List of confidence level associated to the conformation
       pred: List of residue conformations (helix, strand)
       limit_confidence: Confidence threshold
@@ -761,7 +951,7 @@ def histplot(data, label, result_data):
 
 def summary_data(data, results, sessionid):
     """Write summary results
-     Arguments:
+     :Parameters:
       data:
       results: Output path
       sessionid: ID number
@@ -783,7 +973,7 @@ def summary_data(data, results, sessionid):
 
 def save_general_data(atm, results, sessionid):
     """Write general parameters of the produced models
-     Arguments:
+     :Parameters:
        atm:
        results: Output path
        sessionid: ID number
@@ -816,7 +1006,7 @@ def insert_gaps(vals, seq):
 def get_profile(profile_file, seq):
     """Read `profile_file` into a Python array, and add gaps corresponding to
        the alignment sequence `seq`.
-     Arguments:
+     :Parameters:
      Returns:
     """
     # Read all non-comment and non-blank lines from the file:
@@ -980,7 +1170,7 @@ def plot_DOPE_profile_all(list_template, list_model, list_model_files,
 def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
                               sessionid, pdb_codes, results):
     """Divide the protein in two side and plot dope
-       Arguments:
+       :Parameters:
         list_template: List of template
         list_model: List of model
         list_model_files: List of model files
@@ -1031,7 +1221,7 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
 
 def compute_delta_DOPE(template_profile, list_model_profile):
     """Compute delta DOPE
-     Arguments:
+     :Parameters:
       template_profile:
       list_model_profile:
     """
@@ -1056,7 +1246,7 @@ def compute_delta_DOPE(template_profile, list_model_profile):
 def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
                             sessionid, results, template_pdb):
     """Plot delta dope profile
-      Arguments:
+      :Parameters:
         list_delta_dope: List of delta dope
         list_model_files: List of model files
         sessionid: Id number
@@ -1083,7 +1273,7 @@ def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
 
 def get_unique(seq):
     """Get unique elements with order preserving
-      Arguments:
+      :Parameters:
        seq: List of elements
     """
     seen = set()
@@ -1092,7 +1282,7 @@ def get_unique(seq):
 
 def get_sequence(pdb_file):
     """Extract PDB file sequence
-     Arguments:
+     :Parameters:
       pdb_file: Path to the PDB file
     """
     seqpdb = []
@@ -1113,7 +1303,7 @@ def get_sequence(pdb_file):
 def save_delta_DOPE_profile(list_model_files, list_model_profile,
                             list_delta_dope, results, template_pdb):
     """Write delta DOPE profile
-     Arguments:
+     :Parameters:
         list_model_files: List of model files
         list_model_profile: List of profile
         list_delta_dope: List of delta dope
@@ -1133,12 +1323,12 @@ def save_delta_DOPE_profile(list_model_files, list_model_profile,
                     for j in xrange(len(list_delta_dope[i])):
                         if(list_model_profile[i][j] and num < len(seq_pdb)):
                             if list_delta_dope[i][j]:
-                                output.write("{0}\t{1}\n".format(
+                                output.write("{0}\t{1}{2}".format(
                                     seq_pdb[num].split("_")[0],
-                                    list_delta_dope[i][j]))
+                                    list_delta_dope[i][j], os.linesep))
                             else:
-                                output.write("{0}\t0\n".format(
-                                    seq_pdb[num].split("_")[0]))
+                                output.write("{0}\t0{1}".format(
+                                    seq_pdb[num].split("_")[0], os.linesep))
                             num += 1
     except IOError:
         sys.exit("Error cannot open {0}".format(output_file))
@@ -1146,7 +1336,7 @@ def save_delta_DOPE_profile(list_model_files, list_model_profile,
 
 def load_summary(summary_file):
     """Load summary data
-     Arguments:
+     :Parameters:
       summary_file: File describing Dope energy
     """
     summary_data = {}
@@ -1168,9 +1358,9 @@ def load_summary(summary_file):
 
 def run_verification(conf_data, structure_check):
     """
-     Arguments:
-      conf_data: Configuration dictionary
-      structure_check:
+     :Parameters:
+      - conf_data: Configuration dictionary
+      - structure_check:
     """
     raise NotImplemented
 
@@ -1182,6 +1372,11 @@ def main():
     """
     Main program function
     """
+    seqdict = {"ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D",
+               "CYS":"C", "GLU":"E", "GLN":"Q", "GLY":"G",
+               "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K",
+               "MET":"M", "PHE":"F", "PRO":"P", "SER":"S",
+               "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V"}
     args, parser = get_arguments()
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
@@ -1189,6 +1384,10 @@ def main():
     pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
+        args.multifasta_file = check_multifasta(args.multifasta_file,
+                                                pdb_codes, pdb_files, seqdict,
+                                                args.disable_autocorrect,
+                                                args.results)
         args.alignment_file = run_alignment(conf_data, args.multifasta_file,
                                             pdb_codes, pdb_files,
                                             args.alignment_software,
