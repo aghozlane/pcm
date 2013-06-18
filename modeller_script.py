@@ -1548,15 +1548,35 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
                                       [pdb[0]], "", "", ""))
         if('proq' in structure_check):
             print("Run ProQ for " + pdb[0])
-            data_proq += [run_proq(conf_data.hdict['proq'], pred, pdb[0])]
+            status = True
+            try:
+                result_proq = run_proq(conf_data.hdict['proq'], pred, pdb[0])
+            except ConnectionError:
+                print("Error cannot connect to ProQ for {0}".format(pdb[0]),
+                      file=sys.stderr)
+                status = False
+            if status:
+                data_proq += [result_proq]
         if('prosa' in structure_check and REQUESTS):
             print("Run prosa for " + pdb[0])
-            data_prosa += [run_prosa(conf_data.hdict['prosa'], pdb[0],
-                                     results)]
+            status = True
+            try:
+                result_prosa = run_prosa(conf_data.hdict['prosa'], pdb[0],
+                                         results)
+            except ConnectionError:
+                print("Error cannot connect to prosa for {0}".format(pdb[0]),
+                      file=sys.stderr)
+                status = False
+            if status:
+                data_prosa += [result_prosa]
         if('verify3D' in structure_check and REQUESTS):
             print("Run verify3D for " + pdb[0])
-            data_verify3D[pdb[0]] = run_verify3D(conf_data.hdict['verify3D'],
-                                                 pdb[0], results)
+            try:
+                data_verify3D[pdb[0]] = run_verify3D(conf_data.hdict['verify3D'],
+                                                     pdb[0], results)
+            except ConnectionError:
+                print("Error cannot connect to Verify3D", file=sys.stderr)
+                data_verify3D = {}
         num_struct += 1
     return data_proq, data_prosa, data_verify3D
 
