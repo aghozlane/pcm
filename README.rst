@@ -30,6 +30,18 @@ export LD_LIBRARY_PATH=/usr/lib/modeller9.11/lib/x86_64-intel8:$LD_LIBRARY_PATH
 And :
 source .bashrc
 
+- ProQ
+export PROQ_DIR12=/home/user/library/ProQv1.2/
+export NACCESS=/home/user/library/NACCESS/naccess2.1.1/naccess
+export STRIDE=/home/user/library/stride/stride
+export TMPDIR=/home/user/library/ProQv1.2/tmpdir
+
+- Procheck
+export PATH=$PATH:/home/user/library/procheck
+export prodir=/home/user/library/procheck
+alias procheck=/home/user/library/procheck/procheck.scr
+alias proplot=/home/user/library/procheck/proplot.scr
+alias gfac2pdb=/home/user/library/procheck/gfac2pdb.scr
 
 1.2. Run
 ==================

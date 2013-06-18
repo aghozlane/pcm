@@ -26,7 +26,13 @@ import csv
 import math
 import textwrap
 import multiprocessing as mp
-
+try:
+    import requests
+    REQUESTS = True
+except ImportError:
+    REQUESTS = False
+    print("Could not import requests.{0}No structure checking with Verify3D "
+          "or prosa will be available".format(os.linesep), file=sys.stderr)
 try:
     from modeller import *
     from modeller.parallel import *
@@ -82,7 +88,6 @@ class ModelingConfig:
             self.writeconfig()
             self.readconfig()
 
-
     def readconfig(self):
         """Read config data
         """
@@ -97,14 +102,19 @@ class ModelingConfig:
         self.hdict["clustalo"] = self.config.get('Alignment_config',
                                                  'clustalo')
         self.hdict["clustalw2"] = self.config.get('Alignment_config',
-                                                 'clustalw2')
+                                                  'clustalw2')
         self.hdict["mafft"] = self.config.get('Alignment_config',
-                                                 'mafft')
+                                              'mafft')
         self.hdict["muscle"] = self.config.get('Alignment_config',
-                                                 'muscle')
+                                               'muscle')
         self.hdict["t_coffee"] = self.config.get('Alignment_config',
                                                  't_coffee')
-
+        self.hdict["procheck"] = self.config.get('Checking_config',
+                                                 'procheck')
+        self.hdict["prosa"] = self.config.get('Checking_config', 'prosa')
+        self.hdict["proq"] = self.config.get('Checking_config', 'proq')
+        self.hdict["verify3D"] = self.config.get('Checking_config',
+                                                 'verify3D')
 
     def writeconfig(self):
         """Write modeling config
@@ -131,6 +141,15 @@ class ModelingConfig:
                         "-outfile %output -output pir_aln  "
                         "-n_core %proc".format(os.sep))
         # -mode 3dcoffee -template_file %pdb
+        self.config.add_section('Checking_config')
+        self.config.set('Checking_config', 'procheck',
+                        "%path_soft{0}procheck.scr %pdb 1.5".format(os.sep))
+        self.config.set('Checking_config', 'proq',
+                        "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
+        self.config.set('Checking_config', 'prosa',
+                        "https://prosa.services.came.sbg.ac.at/")
+        self.config.set('Checking_config', 'verify3D',
+                        "http://nihserver.mbi.ucla.edu/Verify_3D/")
         # Write configuration data
         try:
             # Writing our configuration file to 'example.cfg'
@@ -172,7 +191,7 @@ def isdir(path):
 def islimit(value):
     """Check if value is in confidence limit.
       :Parameters:
-          conf_value: Confidence value 
+          conf_value: Confidence value
     """
     try:
         conf_value = int(value)
@@ -195,11 +214,10 @@ def get_arguments():
                                      "{0} -h".format(sys.argv[0]))
     parser.add_argument("-l", "--list_operations",
                         default=["modeling", "profile"], type=str, nargs='+',
-                        choices=["modeling", "profile"],  # , "verification"
-                        help='Select the operations : modeling and/or profile '
-                        '(default : both modeling and profile are done)')
-#                               + os.linesep
-#                               + '(verification not available yet)'))
+                        choices=["modeling", "profile", "checking"],
+                        help="Select the operations : modeling and/or profile "
+                        "and/or structure checking (default : both modeling "
+                        "and profile are done)")
     parser.add_argument('-f', '--multifasta_file', type=isfile,
                         help='Multifasta file with model and '
                              'template sequences.')
@@ -236,11 +254,17 @@ def get_arguments():
     parser.add_argument('-b', '--limit_confidence', type=islimit, default=7,
                         help='Confidence limit for psipred'
                         '(0-9 - default = >7).')
-    parser.add_argument('-s', '--structure_check', type=str,
-                         nargs='+', choices=["procheck", "verify3d"],
-                         help='Select software for verification.')
-    parser.add_argument('-sb', '--number_best', type=int,
-                         help='Select number of models for verification ().')
+    parser.add_argument('-s', '--structure_check', type=str, nargs='+',
+                        choices=["procheck", "proq", "prosa", "verify3D"],
+                        help='Select software for structure checking '
+                        '(ProQ significance is enhanced with psipred '
+                        'results).')
+    parser.add_argument('-k', '--path_check', type=isdir, default=local_path,
+                        help='Indicate the path to procheck software.')
+    parser.add_argument('-sb', '--number_best', type=int, default=5,
+                        help='Select number of models for verification'
+                        '(from the best model according to dope score - '
+                        'default = 5).')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
                         'directory is prefered default due to modeller '
@@ -248,8 +272,6 @@ def get_arguments():
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file')
-#     parser.add_argument('-k', '--path_check', type=isdir,
-#                         nargs='+', help='Path to alignment software.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
                         help='Number of thread '
                         '(Default = all cpus available will be used).')
@@ -267,16 +289,18 @@ def detect_cpus():
         if "SC_NPROCESSORS_ONLN" in os.sysconf_names:
             # Linux & Unix: # Linux and Unix:
             ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
-            if isinstance (ncpus, int) and ncpus > 0 :
+            if isinstance(ncpus, int) and ncpus > 0:
                 return ncpus
-            else :  # OSX:
-                return int(os.popen2("sysctl -n hw.ncpu")[ 1 ].read())
+            # OSX:
+            else:
+                return int(os.popen2("sysctl -n hw.ncpu")[1].read())
         # Windows:
         if "NUMBER_OF_PROCESSORS" in os.environ:
-            ncpus = int(os.environ["NUMBER_OF_PROCESSORS"]);
-            if ncpus > 0 :
+            ncpus = int(os.environ["NUMBER_OF_PROCESSORS"])
+            if ncpus > 0:
                 return ncpus
-    return 1  # Default 1
+    # Default 1
+    return 1
 
 
 def download_pdb(conf_data, pdb, results):
@@ -317,9 +341,9 @@ def get_pdb(conf_data, pdb_list, results):
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
             pdb_files += [download_pdb(
-                         conf_data,
-                         ".".join(os.path.basename(pdb).split(".")[:-1]),
-                         results)]
+                             conf_data, ".".join(os.path.basename(pdb)
+                                                 .split(".")[:-1]),
+                             results)]
         # Download corresponding pdb
         else:
             pdb_codes += [".".join(os.path.basename(pdb).split(".")[:-1])]
@@ -345,7 +369,7 @@ def run_command(cmd):
 
 
 def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
-                  output, thread):
+                  output, thread, psipred):
     """Set the software command
      :Parameters:
          build_command: Command
@@ -366,6 +390,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
     build_command = build_command.replace('%multifasta', multifasta_file)
     build_command = build_command.replace('%pdb', " ".join(pdb_files))
     build_command = build_command.replace('%output', output)
+    build_command = build_command.replace('%psipred', psipred)
     print(build_command, file=sys.stderr)
     return build_command
 
@@ -385,7 +410,7 @@ def check_format(aln_data, pdb_codes):
     data = {}
     pdb_elements = pdb_codes[:]
     regex_suite = (re.compile(r"^>" + "|".join([i + ";([\w-]+)"for i in ens])),
-                   re.compile(r"^([sequence|structureX]:[\w-]+" + ":\S+"*8
+                   re.compile(r"^([sequence|structureX]:[\w-]+" + ":\S+" * 8
                               + ")"),
                    re.compile(r"([\w*-]+{0})".format(os.linesep)))
     for line in aln_data:
@@ -446,7 +471,7 @@ def adjust_PIR_format(aln_pir_file, data_dict, pdb_codes, pdb_files,
     try:
         with open(output_file, "wt") as aln_pir:
             for element in data_dict:
-                pdb_start_posit = 1
+#                 pdb_start_posit = 1
                 if(element not in heteroatom_models
                    and len(heteroatom_models) > 0):
                     het_atm_flag = False
@@ -459,28 +484,21 @@ def adjust_PIR_format(aln_pir_file, data_dict, pdb_codes, pdb_files,
                     if element in pdb_codes:
                         type_data = "structureX"
                         structure_present = True
-                        pdb_index = pdb_codes.index(element)
+#                         pdb_index = pdb_codes.index(element)
                         # Identify start postion
-                        pdb_start_posit = get_start_position(
-                                            pdb_files[pdb_index])
+#                         pdb_start_posit = get_start_position(
+#                                             pdb_files[pdb_index])
                     sequence = data_dict[element][1].replace("-", "")
                     sequence = sequence.replace(os.linesep, "")
                     sequence = sequence.replace("*", "")
                     if het_atm_flag:
-                        aln_pir.write("{0}:{1}:{2} :A:{3}:A"
-                                      .format(type_data, element,
-                                              pdb_start_posit,
-                                              pdb_start_posit - 1
-                                              + len(sequence)
-                                              + add_heteroatom)
-                                      + ": "*4 + os.linesep)
+                        aln_pir.write("{0}:{1}: :A: :A"
+                                      .format(type_data, element)
+                                      + ": " * 4 + os.linesep)
                     else:
-                        aln_pir.write("{0}:{1}:{2} :A:{3}:A"
-                                      .format(type_data, element,
-                                              pdb_start_posit,
-                                              pdb_start_posit - 1
-                                              + len(sequence))
-                                      + ": "*4 + os.linesep)
+                        aln_pir.write("{0}:{1}:  :A: :A"
+                                      .format(type_data, element)
+                                      + ": " * 4 + os.linesep)
                 end_aln_posit = data_dict[element][1].index("*")
                 if het_atm_flag:
                     aln_pir.write("{0}{1}{2}{3}".format(
@@ -599,8 +617,8 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                     pdb_start_posit = get_start_position(pdb_files[pdb_index])
                 # Check if we have to add heteroatom in the alignment for the
                 # current PDB
-                if (element not in heteroatom_models
-                    and len(heteroatom_models) > 0):
+                if (element not in heteroatom_models and
+                        len(heteroatom_models) > 0):
                     hetatm_flag = False
                 sequence = data_fasta[element].replace("-", "")
                 sequence = sequence.replace(os.linesep, "")
@@ -608,14 +626,14 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                     aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}".format(
                                 type_data, element, pdb_start_posit,
                                 pdb_start_posit - 1 + len(sequence) +
-                                add_heteroatom, ": "*4, os.linesep))
+                                add_heteroatom, ": " * 4, os.linesep))
                     aln_pir.write("{0}{1}*{2}".format(data_fasta[element],
                                                      hetatm, os.linesep))
                 else:
                     aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}"
                                   .format(type_data, element, pdb_start_posit,
                                           pdb_start_posit - 1 + len(sequence),
-                                          ": "*4, os.linesep))
+                                          ": " * 4, os.linesep))
                     aln_pir.write("{0}*{1}".format(data_fasta[element],
                                                   os.linesep))
                 hetatm_flag = True
@@ -676,10 +694,8 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
     try:
         with open(corrected_fasta_file, "wt") as corrected_fasta:
             for head in multifasta_data:
-                print(head)
                 # PDB is missing in the multifasta
                 if head in wrong_pdb:
-                    print(pdb_seq[head])
                     corrected_fasta.write(
                         ">{0}{1}{2}{1}".format(
                             head, os.linesep,
@@ -687,7 +703,6 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
                                 textwrap.wrap(pdb_seq[head], 80))))
                 # The line was correct
                 else:
-                    print("bouh")
                     corrected_fasta.write(
                         ">{0}{1}{2}{1}".format(
                             head, os.linesep,
@@ -717,8 +732,6 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
             pdb_index = wrong_pdb.index(head)
             pdb_seq[head] = get_pdb_sequence(pdb_files[pdb_index], seqdict)
             # IF PDB is OK
-            print(pdb_seq[head])
-            print(multifasta_data[head])
             if pdb_seq[head] == multifasta_data[head]:
                 wrong_pdb.pop(pdb_index)
             else:
@@ -764,13 +777,13 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
     if alignment_software in ("t_coffee", "clustalw2"):
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_pir_file, thread))
+                                  aln_pir_file, thread, ""))
     else:
         aln_fasta_file = (results + alignment_software + "_"
                           + str(os.getpid()) + "_aln.fasta")
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_fasta_file, thread))
+                                  aln_fasta_file, thread, ""))
         data_fasta = get_fasta_data(aln_fasta_file)
         write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                        add_heteroatom, heteroatom_models)
@@ -892,18 +905,15 @@ def cluster_psipred(conf, pred, limit_confidence):
 
 
 def compute_models(env, job_worker, alignment_file, pdb_codes, pdb_files,
-                   model_name, model_quality, number_model, psipred,
-                   limit_confidence):
-    """Define modeling parameters and start modeling 
+                   model_name, model_quality, number_model, psipred_result):
+    """Define modeling parameters and start modeling
     """
     # Load psipred
-    if(psipred):
-        conf, pred = load_psipred(psipred)
-        psipred_result = cluster_psipred(conf, pred, limit_confidence)
+    if(psipred_result):
         atm = RestraintModel(env, alnfile=alignment_file,
-                     knowns=pdb_codes, sequence=model_name,
-                     assess_methods=[assess.GA341, assess.DOPE,
-                                     assess.normalized_dope])
+                             knowns=pdb_codes, sequence=model_name,
+                             assess_methods=[assess.GA341, assess.DOPE,
+                                             assess.normalized_dope])
         atm.psipred_result = psipred_result
     else:
 #         # classical models
@@ -985,8 +995,8 @@ def save_general_data(atm, results, sessionid):
     # Barplot Dope score of each ok models
     if MATPLOTLIB:
         histplot([i["DOPE score"] for i in ok_models],
-                ["Dope score", "Frequency", "Dope score histogram"],
-                results + "dope_per_model_{0}.svg".format(sessionid))
+                 ["Dope score", "Frequency", "Dope score histogram"],
+                 results + "dope_per_model_{0}.svg".format(sessionid))
     # Write data summary
     summary_data(ok_models, results, sessionid)
 
@@ -1075,7 +1085,7 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
     """
     # Get color map
     color_map = cm.get_cmap('gist_rainbow')
-    colors = [color_map(1.*i / len(list_model))
+    colors = [color_map(1. * i / len(list_model))
               for i in xrange(len(list_model))]
     for t in xrange(len(list_template)):
         # Plot the template and model profiles in the same plot for comparison:
@@ -1124,7 +1134,7 @@ def plot_DOPE_profile_all(list_template, list_model, list_model_files,
     """
     # Get color map
     color_map = cm.get_cmap('gist_rainbow')
-    colors = [color_map(1.*i / (len(list_model) + len(list_template)))
+    colors = [color_map(1. * i / (len(list_model) + len(list_template)))
               for i in xrange(len(list_model) + len(list_template))]
     # Plot the template and model profiles in the same plot for comparison:
     fig = plt.figure(figsize=(10, 7))
@@ -1182,15 +1192,15 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
     for i in xrange(len(list_template)):
         middle = math.ceil(len(list_template[i]) / 2.0)
         part = [[0, int(middle)]]
-        part += [[int(middle) + 1 , len(list_template[i])]]
+        part += [[int(middle) + 1, len(list_template[i])]]
         for e in part:
             # Plot models
             for j in xrange(len(list_model)):
                 dist = abs(len(list_model[j]) - len(list_template[i]))
                 if(len(list_model[j]) < len(list_template[i])):
-                    list_model[j] += list_template[i][-dist :]
+                    list_model[j] += list_template[i][-dist:]
                 elif(len(list_model[j]) > len(list_template[i])):
-                    list_template[i] += list_model[j][-dist :]
+                    list_template[i] += list_model[j][-dist:]
                 assert(len(list_model[j]) == len(list_template[i]))
                 # Plot the template and model profiles
                 # in the same plot for comparison:
@@ -1229,9 +1239,9 @@ def compute_delta_DOPE(template_profile, list_model_profile):
     for model_profile in list_model_profile:
         dist = abs(len(model_profile) - len(template_profile))
         if(len(model_profile) < len(template_profile)):
-            model_profile += template_profile[-dist :]
+            model_profile += template_profile[-dist:]
         elif(len(model_profile) > len(template_profile)):
-            template_profile += model_profile[-dist :]
+            template_profile += model_profile[-dist:]
         assert(len(model_profile) == len(template_profile))
         profile = []
         for i in xrange(len(model_profile)):
@@ -1356,13 +1366,246 @@ def load_summary(summary_file):
     return summary_data
 
 
-def run_verification(conf_data, structure_check):
+def save_picture(urlfile, output_file):
+    """
+    """
+    try:
+        request = requests.get(urlfile)
+        with open(output_file, "wb") as output_image:
+            for block in request.iter_content(1024):
+                if not block:
+                    break
+                output_image.write(block)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(output_file))
+
+
+def run_proq(website_path, pred, pdb):
+    """Run ProQ
+    """
+    # Set PDB file
+    try:
+        with open(pdb, 'rt') as pdb_sent:
+            files = {'pdbfile': pdb_sent}
+            # Send PDB file
+            if pred:
+                req = requests.post(website_path, files=files,
+                                    data={'ss': "".join(pred)})
+            else:
+                req = requests.post(website_path, files=files)
+        assert(req.status_code == requests.codes.ok)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_sent))
+    except AssertionError:
+        sys.exit("Something went wrong with {0}".format(0))
+    try:
+        if(req.text):
+            maxsub = float(req.text.split("Predicted MaxSub              : <b>")[1]
+                           .split("</b><BR>")[0])
+            lgscore = float(req.text.split("Predicted LGscore             : <b>")[1]
+                            .split("</b><BR>")[0])
+        else:
+            sys.exit("No data received from ProQ")
+    except ValueError:
+        sys.exit("Something went wrong with {0}".format(0))
+    return [pdb, maxsub, lgscore]
+
+
+def run_prosa(website_path, pdb, results):
+    """Run prosa
+    """
+    zscore = None
+    path_hrplot = None
+    path_eplot = None
+    # Set cache properties
+    payload = {'max_file_size': '26214400', "maxlength": '26214400'}
+    # Set PDB file
+    try:
+        # "action":"/prosa.phb"
+        with open(pdb, 'rt') as pdb_sent:
+            files = {'userfile': pdb_sent}
+            # Send PDB file
+            req = requests.post(website_path + "prosa.php", files=files,
+                                data=payload)
+        assert(req.status_code == requests.codes.ok)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_sent))
+    except AssertionError:
+        sys.exit("Something went wrong with {0}".format(0))
+    try:
+        if (req.text):
+            zscore = float(req.text.split("<span class='zscore'>")[1]
+                           .split("</span>")[0])
+            path_hrplot = req.text.split("<a href='upload/")[1].split("' alt='")[0]
+            path_eplot = req.text.split("<img src='upload/")[2].split("' alt='")[0]
+        else:
+            sys.exit("No data received from verify3D")
+    except ValueError:
+        sys.exit("Something went wrong with {0}".format(0))
+    # Download profile picture
+    if(path_hrplot):
+        save_picture(website_path + "upload/" + path_hrplot,
+                     results + "prosa_hrplot_" +
+                     ".".join(os.path.basename(pdb).split(".")[:-1]) + ".png")
+    if(path_eplot):
+        save_picture(website_path + "upload/" + path_eplot,
+                     results + "prosa_eplot_" +
+                     ".".join(os.path.basename(pdb).split(".")[:-1]) + ".png")
+    return [pdb, zscore]
+
+
+def load_verify3D(verify3D_result):
+    """
+    """
+    regex_verify = re.compile(r"^raw\s+([A-Z])\s+([0-9]+)\s+([0-9.-]+)\s+"
+                             "([0-9.-]+)")
+    data_verify3D = []
+    try:
+        for line in verify3D_result.split(os.linesep):
+            match_verify = regex_verify.match(line)
+            if match_verify:
+                # Residue Position First_score Second_score
+                data_verify3D += [[match_verify.group(1),
+                                   int(match_verify.group(2)),
+                                   float(match_verify.group(3)),
+                                   float(match_verify.group(4))]]
+        assert(len(data_verify3D) > 0)
+    except ValueError:
+        sys.exit("There is something wrong with :" + os.linesep
+                 + "\"{0}\"".format(line))
+    except AssertionError:
+        sys.exit("Failed to load verify3D raw scores :{0}\"{1}\""
+                 .format(os.linesep, line))
+    return data_verify3D
+
+
+def run_verify3D(website_path, pdb, results):
+    """Run Verify3D
+    """
+    req = None
+    req2 = None
+    # Set cache properties
+    payload = {'MAX_FILE_SIZE': '1073741824', 'pagestatus': 'sendit'}
+    # Set PDB file
+    try:
+        with open(pdb, 'rt') as pdb_sent:
+            files = {'pdbfile': pdb_sent}
+            # Indicate original page
+            headers = {'referer': website_path}
+            # Send PDB file
+            req = requests.post(website_path, data=payload, files=files,
+                                headers=headers)
+        assert(req.status_code == requests.codes.ok)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_sent))
+    except AssertionError:
+        sys.exit("Something went wrong with {0}".format(0))
+    if(req):
+        # Get session id
+        ver = req.text.split('action="/Verify_3D/temp/raw')[1].split(".dat")[0]
+        # Download profile picture
+        save_picture(website_path + "temp/vplot" + ver + ".png",
+                     results + "verify3D_"
+                     + ".".join(os.path.basename(pdb).split(".")[:-1])
+                     + ".png")
+        # Download result file
+        req2 = requests.get(website_path + "temp/raw" + ver + ".dat?",
+                            headers=headers)
+    else:
+        sys.exit("No data received from verify3D")
+    if(req2):
+        # Load verify3D data
+        data_verify3D = load_verify3D(req2.text)
+        # Write verify3D data
+        write_checking(data_verify3D, ["Residue", "Position", "Score 1",
+                                       "Score 2"],
+                       results + "verify3D_"
+                       + ".".join(os.path.basename(pdb).split(".")[:-1])
+                       + ".txt")
+    else:
+        sys.exit("No data received from verify3D")
+    return data_verify3D
+
+
+def run_checking(conf_data, summary_data, structure_check, path_check,
+                 number_best, pred, REQUESTS, results):
     """
      :Parameters:
       - conf_data: Configuration dictionary
       - structure_check:
     """
-    raise NotImplemented
+    data_proq = []
+    data_prosa = []
+    data_verify3D = {}
+    num_struct = 0
+    for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
+        if num_struct >= number_best:
+            break
+        if('procheck' in structure_check):
+            print("Run procheck for " + pdb[0])
+            run_command(replace_motif(conf_data.hdict['procheck'],
+                                      path_check, "",
+                                      [pdb[0]], "", "", ""))
+        if('proq' in structure_check):
+            print("Run ProQ for " + pdb[0])
+            data_proq += [run_proq(conf_data.hdict['proq'], pred, pdb[0])]
+        if('prosa' in structure_check and REQUESTS):
+            print("Run prosa for " + pdb[0])
+            data_prosa += [run_prosa(conf_data.hdict['prosa'], pdb[0],
+                                     results)]
+        if('verify3D' in structure_check and REQUESTS):
+            print("Run verify3D for " + pdb[0])
+            data_verify3D[pdb[0]] = run_verify3D(conf_data.hdict['verify3D'],
+                                                 pdb[0], results)
+        num_struct += 1
+    return data_proq, data_prosa, data_verify3D
+
+
+def write_checking(data, title, filename):
+    """
+    """
+    try:
+        with open(filename, "wt") as output:
+            outwriter = csv.writer(output, delimiter="\t")
+            outwriter.writerow(title)
+            outwriter.writerows(data)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(filename))
+
+
+def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
+                          sessionid):
+    """
+    """
+    pdb_files = []
+    num_struct = 0
+    # Get color map
+    color_map = cm.get_cmap('gist_rainbow')
+    colors = [color_map(1. * i / number_best)
+              for i in xrange(number_best)]
+    # Plot the template and model profiles in the same plot for comparison:
+    fig = plt.figure(figsize=(30, 7))
+    ax1 = fig.add_subplot(1, 1, 1)
+    ax1.set_xlabel('Residue number')
+    ax1.set_ylabel('Raw score per-residue')
+    for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
+        if num_struct >= number_best:
+            break
+        # Plot templates
+        ax1.plot(
+            [element[1] for element in data_verify3D[pdb[0]]],
+            [element[3] for element in data_verify3D[pdb[0]]],
+            color=colors[num_struct], linewidth=1, label=pdb[0])
+        num_struct += 1
+        pdb_files += [pdb[0]]
+    ax1.legend(
+         pdb_files,
+         loc="upper center", numpoints=1,
+         bbox_to_anchor=(0.5, 1.12),
+         ncol=3, fancybox=True, shadow=True)
+    plt.savefig(results + os.sep + "verify3D_profile_{0}.svg"
+                .format(sessionid))
+    plt.clf()
 
 
 #==============================================================
@@ -1372,14 +1615,23 @@ def main():
     """
     Main program function
     """
-    seqdict = {"ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D",
-               "CYS":"C", "GLU":"E", "GLN":"Q", "GLY":"G",
-               "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K",
-               "MET":"M", "PHE":"F", "PRO":"P", "SER":"S",
-               "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V"}
+    conf = None
+    pred = None
+    psipred_result = None
+    # List of Amino-acid and their three-letter and one-letter code
+    seqdict = {"ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D",
+               "CYS": "C", "GLU": "E", "GLN": "Q", "GLY": "G",
+               "HIS": "H", "ILE": "I", "LEU": "L", "LYS": "K",
+               "MET": "M", "PHE": "F", "PRO": "P", "SER": "S",
+               "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"}
+    # Load parameters
     args, parser = get_arguments()
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
+    # Load psipred file
+    if args.psipred:
+        conf, pred = load_psipred(args.psipred)
+        psipred_result = cluster_psipred(conf, pred, args.limit_confidence)
     # Prepare modeling
     pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
@@ -1407,7 +1659,11 @@ def main():
         args.model_name = get_model(args.alignment_file, pdb_codes)
     # Get session id
     sessionid = get_session_id(args.alignment_file)
-    if MODELLER:
+    # Summary file reference
+    summary_file = (args.results + "modeller_summary_"
+                    + str(sessionid) + ".csv")
+    if (MODELLER and ("modeling" in args.list_operations
+                      or "profile" in args.list_operations)):
         # request verbose output
         log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
         log.verbose()
@@ -1419,13 +1675,9 @@ def main():
         # Start Modelling
         atm = compute_models(env, job_worker, args.alignment_file, pdb_codes,
                              pdb_files, args.model_name, args.model_quality,
-                             args.number_model, args.psipred,
-                             args.limit_confidence)
+                             args.number_model, psipred_result)
         save_general_data(atm, args.results, sessionid)
     if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
-        # Summary file reference
-        summary_file = (args.results + "modeller_summary_"
-                        + str(sessionid) + ".csv")
         # List of models
         list_model = [args.model_name + ".B" + str(99990000 + i)
                       for i in xrange(1, args.number_model + 1)
@@ -1483,8 +1735,33 @@ def main():
                      args.results + "dope_per_model_{0}.svg".format(sessionid))
         else:
             sys.exit("{0} does not exist".format(summary_file))
-    if args.structure_check:
-        run_verification(None, args.structure_check)
+    if args.structure_check and os.path.isfile(summary_file):
+        # Histogram of DOPE
+        summary_data = load_summary(summary_file)
+        # Check number of model
+        if args.number_best > args.number_model:
+            args.number_best = args.number_model
+        # Start structure checking
+        data_proq, data_prosa, data_verify3D = run_checking(
+                                        conf_data, summary_data,
+                                        args.structure_check, args.path_check,
+                                        args.number_best, pred,
+                                        REQUESTS, args.results)
+        if data_proq:
+            write_checking(data_proq, ["PDB", "maxsub", "lgscore"],
+                           args.results + os.sep + "result_proq_{0}.txt"
+                           .format(sessionid))
+        if data_prosa:
+            write_checking(data_prosa, ["PDB", "zscore"],
+                           args.results + os.sep + "result_prosa_{0}.txt"
+                           .format(sessionid))
+        if data_verify3D:
+            plot_verify3D_profile(summary_data, data_verify3D,
+                                  args.number_best, args.results,
+                                  sessionid)
+
+    elif args.structure_check and not os.path.isfile(summary_file):
+        sys.exit("Summary file is required for structure checking")
 
 
 if __name__ == '__main__':
