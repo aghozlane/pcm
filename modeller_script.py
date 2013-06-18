@@ -1551,7 +1551,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             status = True
             try:
                 result_proq = run_proq(conf_data.hdict['proq'], pred, pdb[0])
-            except ConnectionError:
+            except requests.exceptions.ConnectionError:
                 print("Error cannot connect to ProQ for {0}".format(pdb[0]),
                       file=sys.stderr)
                 status = False
@@ -1563,7 +1563,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             try:
                 result_prosa = run_prosa(conf_data.hdict['prosa'], pdb[0],
                                          results)
-            except ConnectionError:
+            except requests.exceptions.ConnectionError:
                 print("Error cannot connect to prosa for {0}".format(pdb[0]),
                       file=sys.stderr)
                 status = False
@@ -1574,7 +1574,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             try:
                 data_verify3D[pdb[0]] = run_verify3D(conf_data.hdict['verify3D'],
                                                      pdb[0], results)
-            except ConnectionError:
+            except requests.exceptions.ConnectionError:
                 print("Error cannot connect to Verify3D", file=sys.stderr)
                 data_verify3D = {}
         num_struct += 1
