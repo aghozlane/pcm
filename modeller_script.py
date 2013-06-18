@@ -31,8 +31,9 @@ try:
     REQUESTS = True
 except ImportError:
     REQUESTS = False
-    print("Could not import requests.{0}No structure checking with Verify3D "
-          "or prosa will be available".format(os.linesep), file=sys.stderr)
+    print("Could not import requests.{0}No structure checking with prosa or "
+          "ProQ or Verify3D will be available".format(os.linesep),
+          file=sys.stderr)
 try:
     from modeller import *
     from modeller.parallel import *
@@ -336,7 +337,6 @@ def get_pdb(conf_data, pdb_list, results):
     pdb_codes = []
     pdb_files = []
     for pdb in pdb_list:
-
         # Correspond to a PDB file
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
@@ -647,8 +647,8 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
 def get_multifasta_data(multifasta_file):
     """
     """
-    regex_head = re.compile("^>([\w-]+)")
-    regex_protein = re.compile("^([A-Za-z]+)")
+    regex_head = re.compile(r"^>([\w-]+)")
+    regex_protein = re.compile(r"^([A-Za-z]+)")
     multifasta_data = {}
     with open(multifasta_file) as multifasta:
         for line in multifasta:
@@ -718,7 +718,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
     """Check multifasta
     """
     check_wrong = False
-    wrong_pdb = pdb_codes
+    wrong_pdb = pdb_codes[:]
     pdb_seq = {}
     # Check extension
     if not multifasta_file.endswith("fasta"):
@@ -800,7 +800,7 @@ def get_model(aln_file, pdb_codes):
       pdb_codes: List of PDB
      Returns:
     """
-    regex = re.compile("^>\w+;([\w-]+)")
+    regex = re.compile(r"^>\w+;([\w-]+)")
     model = None
     try:
         with open(aln_file) as aln:
@@ -858,8 +858,8 @@ def load_psipred(psipred_file):
     """
     conf = []
     pred = []
-    regex_conf = re.compile("^Conf:\s+([0-9]+)")
-    regex_pred = re.compile("^Pred:\s+([ECH]+)")
+    regex_conf = re.compile(r"^Conf:\s+([0-9]+)")
+    regex_pred = re.compile(r"^Pred:\s+([ECH]+)")
     if not psipred_file.endswith("psipass2"):
         print("Warning :  the psipred file is supposed to be "
               "in psipass2 format", file=sys.stderr)
@@ -1060,7 +1060,7 @@ def get_session_id(alignment_file):
     """Get the id of previous calculation
     """
     session_id = os.getpid()
-    regex = re.compile("[\w-]+_([0-9]+)_aln.*\.pir")
+    regex = re.compile(r"[\w-]+_([0-9]+)_aln.*\.pir")
     match = regex.match(os.path.basename(alignment_file))
     if match:
         session_id = match.group(1)
