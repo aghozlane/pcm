@@ -1713,7 +1713,7 @@ def main():
         log.verbose()
         # Load environment
         env = get_environment(pdb_files)
-    if MODELLER and "modeling" in args.list_operations:
+    if MODELLER and "model" in args.list_operations:
         # Use several CPUs in a parallel job on this machine
         job_worker = get_parallel(int(args.thread))
         # Start Modelling
