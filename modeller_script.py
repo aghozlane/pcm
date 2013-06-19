@@ -688,7 +688,7 @@ def get_pdb_sequence(pdb_file, seqdict):
 
 
 def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
-                             wrong_pdb, results):
+                             wrong_pdb, seqdict, results):
     """Create a new multifasta
     """
     corrected_fasta_file = (results +
@@ -705,6 +705,8 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
                             head, os.linesep,
                             "{0}".format(os.linesep).join(
                                 textwrap.wrap(pdb_seq[head], 80))))
+                    # Resolved problems
+                    wrong_pdb.pop(wrong_pdb.index(head))
                 # The line was correct
                 else:
                     corrected_fasta.write(
@@ -712,6 +714,13 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
                             head, os.linesep,
                             "{0}".format(os.linesep).join(
                                 textwrap.wrap(multifasta_data[head], 80))))
+            # Download missing sequences
+            for pdb in wrong_pdb:
+                corrected_fasta.write(">{0}{1}{2}{1}".format(
+                            head, os.linesep,
+                            "{0}".format(os.linesep).join(
+                                textwrap.wrap(get_pdb_sequence(pdb, seqdict),
+                                              80))))
     except IOError:
         sys.exit("Error cannot open {0}".format(corrected_fasta_file))
     return corrected_fasta_file
@@ -754,7 +763,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
         multifasta_file = adjust_multifasta_format(multifasta_file,
                                                    multifasta_data,
                                                    pdb_seq, wrong_pdb,
-                                                   results)
+                                                   seqdict, results)
     return multifasta_file
 
 
@@ -1582,8 +1591,9 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
         if('verify3D' in structure_check and REQUESTS):
             print("Run verify3D for " + pdb[0])
             try:
-                data_verify3D[pdb[0]] = run_verify3D(conf_data.hdict['verify3D'],
-                                                     pdb[0], results)
+                data_verify3D[pdb[0]] = run_verify3D(
+                                            conf_data.hdict['verify3D'],
+                                            pdb[0], results)
             except requests.exceptions.ConnectionError:
                 print("Error cannot connect to Verify3D", file=sys.stderr)
                 data_verify3D = {}
