@@ -1656,8 +1656,8 @@ def main():
                "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"}
     # Load parameters
     args, parser = get_arguments()
-    if ("profile" in args.list_operations
-        or "model" in args.list_operations and len(args.pdb) == 0):
+    if (("profile" in args.list_operations
+        or "model" in args.list_operations) and len(args.pdb) == 0):
         print("You must provide at least one structure template "
               "for modeling and/or profiling", file=sys.stderr)
         sys.exit(parser.print_help())
