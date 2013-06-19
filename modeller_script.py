@@ -671,6 +671,7 @@ def get_pdb_sequence(pdb_file, seqdict):
     """
     pdb_seq = ""
     res = 0
+    chain = None
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
@@ -680,6 +681,11 @@ def get_pdb_sequence(pdb_file, seqdict):
                 if newres != res and field == "ATOM":
                     pdb_seq += seqdict[aa]
                     res = newres
+                    newchain = chain
+                    if not chain:
+                        chain = line[21:22]
+                    if newchain != chain:
+                        break
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
     except TypeError:
