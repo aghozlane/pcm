@@ -678,7 +678,7 @@ def get_pdb_sequence(pdb_file, seqdict):
                 if newres != res and field == "ATOM":
                     pdb_seq += seqdict[aa]
                     res = newres
-                    newchain = chain
+                    newchain = line[21:22]
                     if not chain:
                         chain = line[21:22]
                     if newchain != chain:
