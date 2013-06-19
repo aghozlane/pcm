@@ -214,9 +214,9 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h".format(sys.argv[0]))
     parser.add_argument("-l", "--list_operations",
-                        default=["modeling", "profile"], type=str, nargs='+',
-                        choices=["modeling", "profile", "checking"],
-                        help="Select the operations : modeling and/or profile "
+                        default=["model", "profile"], type=str, nargs='+',
+                        choices=["model", "profile", "check"],
+                        help="Select the operations : model and/or profile "
                         "and/or structure checking (default : both modeling "
                         "and profile are done)")
     parser.add_argument('-f', '--multifasta_file', type=isfile,
@@ -230,7 +230,7 @@ def get_arguments():
                                  "t_coffee"],
                         help="Indicates the software that should be used to "
                         "align sequences.")
-    parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
+    parser.add_argument('-p', '--pdb', type=str, nargs='+',
                         help="List of pdb files or codes to use as template.")
     parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize.')
@@ -257,6 +257,7 @@ def get_arguments():
                         '(0-9 - default = >7).')
     parser.add_argument('-s', '--structure_check', type=str, nargs='+',
                         choices=["procheck", "proq", "prosa", "verify3D"],
+                        default=["procheck", "proq", "prosa", "verify3D"],
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results).')
@@ -266,13 +267,16 @@ def get_arguments():
                         help='Select number of models for verification'
                         '(from the best model according to dope score - '
                         'default = 5).')
+    parser.add_argument('-sm', '--modeller_summary', type=isfile, default=None,
+                        help='Indicate modeller script file (instead of '
+                        'alignment file) for checking.')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
                         'directory is prefered default due to modeller '
-                        'constraint)')
+                        'constraint).')
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
-                        help='Disable the autocorrect of the multifasta file')
+                        help='Disable the autocorrect of the multifasta file.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
                         help='Number of thread '
                         '(Default = all cpus available will be used).')
@@ -1056,14 +1060,18 @@ def compute_profile(data):
             insert_gaps([i.energy for i in profile_smooth], aln_template)]
 
 
-def get_session_id(alignment_file):
+def get_session_id(idfile):
     """Get the id of previous calculation
     """
     session_id = os.getpid()
-    regex = re.compile(r"[\w-]+_([0-9]+)_aln.*\.pir")
-    match = regex.match(os.path.basename(alignment_file))
-    if match:
-        session_id = match.group(1)
+    regex_aln = re.compile(r"[\w-]+_([0-9]+)_aln.*\.pir")
+    regex_modeller = re.compile(r"[\w-]+_([0-9]+)\.csv")
+    match_aln = regex_aln.match(os.path.basename(idfile))
+    match_modeller = regex_modeller.match(os.path.basename(idfile))
+    if match_aln:
+        session_id = match_aln.group(1)
+    elif match_modeller:
+        session_id = match_modeller.group(1)
     return session_id
 
 
@@ -1400,10 +1408,10 @@ def run_proq(website_path, pred, pdb):
         sys.exit("Something went wrong with {0}".format(0))
     try:
         if(req.text):
-            maxsub = float(req.text.split("Predicted MaxSub              : <b>")[1]
-                           .split("</b><BR>")[0])
-            lgscore = float(req.text.split("Predicted LGscore             : <b>")[1]
-                            .split("</b><BR>")[0])
+            maxsub = float(req.text.split("Predicted MaxSub              "
+                                          ": <b>")[1].split("</b><BR>")[0])
+            lgscore = float(req.text.split("Predicted LGscore             "
+                                           ": <b>")[1].split("</b><BR>")[0])
         else:
             sys.exit("No data received from ProQ")
     except ValueError:
@@ -1436,8 +1444,10 @@ def run_prosa(website_path, pdb, results):
         if (req.text):
             zscore = float(req.text.split("<span class='zscore'>")[1]
                            .split("</span>")[0])
-            path_hrplot = req.text.split("<a href='upload/")[1].split("' alt='")[0]
-            path_eplot = req.text.split("<img src='upload/")[2].split("' alt='")[0]
+            path_hrplot = req.text.split("<a href='upload/")[1].split(
+                                                                "' alt='")[0]
+            path_eplot = req.text.split("<img src='upload/")[2].split(
+                                                                "' alt='")[0]
         else:
             sys.exit("No data received from verify3D")
     except ValueError:
@@ -1646,6 +1656,11 @@ def main():
                "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"}
     # Load parameters
     args, parser = get_arguments()
+    if ("profile" in args.list_operations
+        or "model" in args.list_operations and not args.pdb):
+        print("You must provide at least one structure template "
+              "for modeling and/or profiling", file=sys.stderr)
+        sys.exit(parser.print_help())
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
     # Load psipred file
@@ -1653,7 +1668,8 @@ def main():
         conf, pred = load_psipred(args.psipred)
         psipred_result = cluster_psipred(conf, pred, args.limit_confidence)
     # Prepare modeling
-    pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
+    if ("profile" in args.list_operations or "model" in args.list_operations):
+        pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
         args.multifasta_file = check_multifasta(args.multifasta_file,
@@ -1671,18 +1687,26 @@ def main():
         sys.exit("You have provided an alignment and the multifasta "
                  "which indicates to compute the alignment. "
                  "Please choose only one.")
-    elif not args.multifasta_file and not args.alignment_file:
+    elif (not args.multifasta_file and not args.alignment_file
+          and ("profile" in args.list_operations
+               or "model" in args.list_operations)):
         print("You must provide an alignment or a multifasta sequence "
               "to continue...", file=sys.stderr)
         sys.exit(parser.print_help())
-    if not args.model_name:
+    if (("profile" in args.list_operations or "model" in args.list_operations)
+        and not args.model_name):
         args.model_name = get_model(args.alignment_file, pdb_codes)
     # Get session id
-    sessionid = get_session_id(args.alignment_file)
+    if args.alignment_file:
+        sessionid = get_session_id(args.alignment_file)
+    elif args.modeller_summary:
+        sessionid = get_session_id(args.modeller_summary)
+    else:
+        sys.exit("One alignment file or a modeller summary file is required.")
     # Summary file reference
     summary_file = (args.results + "modeller_summary_"
                     + str(sessionid) + ".csv")
-    if (MODELLER and ("modeling" in args.list_operations
+    if (MODELLER and ("model" in args.list_operations
                       or "profile" in args.list_operations)):
         # request verbose output
         log.level(output=1, notes=1, warnings=1, errors=1, memory=0)
@@ -1756,6 +1780,9 @@ def main():
         else:
             sys.exit("{0} does not exist".format(summary_file))
     if args.structure_check and os.path.isfile(summary_file):
+        if not args.psipred and "proq" in args.structure_check:
+            print("It is recommanded to provide secondary structure prediction"
+                  " using psipred to use ProQ.")
         # Histogram of DOPE
         summary_data = load_summary(summary_file)
         # Check number of model
