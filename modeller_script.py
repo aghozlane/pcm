@@ -688,7 +688,7 @@ def get_pdb_sequence(pdb_file, seqdict):
 
 
 def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
-                             wrong_pdb, seqdict, pdb_files, results):
+                             wrong_pdb, pdb_codes, pdb_files, seqdict, results):
     """Create a new multifasta
     """
     corrected_fasta_file = (results +
@@ -715,12 +715,14 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
                             "{0}".format(os.linesep).join(
                                 textwrap.wrap(multifasta_data[head], 80))))
             # Download missing sequences
-            for i in xrange(len(wrong_pdb)):
+            for pdb in wrong_pdb:
+                pdb_index = pdb_codes.index(pdb)
                 corrected_fasta.write(">{0}{1}{2}{1}".format(
                             head, os.linesep,
                             "{0}".format(os.linesep).join(
-                                textwrap.wrap(get_pdb_sequence(pdb_files[i],
-                                                               seqdict), 80))))
+                                textwrap.wrap(
+                                    get_pdb_sequence(pdb_files[pdb_index],
+                                                     seqdict), 80))))
     except IOError:
         sys.exit("Error cannot open {0}".format(corrected_fasta_file))
     return corrected_fasta_file
@@ -742,7 +744,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
     # Check multifasta data and PDB
     for head in multifasta_data:
         try:
-            pdb_index = wrong_pdb.index(head)
+            pdb_index = pdb_codes.index(head)
             pdb_seq[head] = get_pdb_sequence(pdb_files[pdb_index], seqdict)
             # IF PDB is OK
             if pdb_seq[head] == multifasta_data[head]:
@@ -761,8 +763,8 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
     if not disable_autocorrect and check_wrong:
         print("Try to correct multifasta file.", file=sys.stderr)
         multifasta_file = adjust_multifasta_format(multifasta_file,
-                                                   multifasta_data,
-                                                   pdb_seq, wrong_pdb,
+                                                   multifasta_data, pdb_seq,
+                                                   wrong_pdb, pdb_codes,
                                                    pdb_files, seqdict, results)
     return multifasta_file
 
