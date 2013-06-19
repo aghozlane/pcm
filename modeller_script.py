@@ -688,7 +688,7 @@ def get_pdb_sequence(pdb_file, seqdict):
 
 
 def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
-                             wrong_pdb, seqdict, results):
+                             wrong_pdb, seqdict, pdb_files, results):
     """Create a new multifasta
     """
     corrected_fasta_file = (results +
@@ -715,12 +715,12 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
                             "{0}".format(os.linesep).join(
                                 textwrap.wrap(multifasta_data[head], 80))))
             # Download missing sequences
-            for pdb in wrong_pdb:
+            for i in xrange(len(wrong_pdb)):
                 corrected_fasta.write(">{0}{1}{2}{1}".format(
                             head, os.linesep,
                             "{0}".format(os.linesep).join(
-                                textwrap.wrap(get_pdb_sequence(pdb, seqdict),
-                                              80))))
+                                textwrap.wrap(get_pdb_sequence(pdb_files[i],
+                                                               seqdict), 80))))
     except IOError:
         sys.exit("Error cannot open {0}".format(corrected_fasta_file))
     return corrected_fasta_file
@@ -763,7 +763,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
         multifasta_file = adjust_multifasta_format(multifasta_file,
                                                    multifasta_data,
                                                    pdb_seq, wrong_pdb,
-                                                   seqdict, results)
+                                                   pdb_files, seqdict, results)
     return multifasta_file
 
 
