@@ -718,11 +718,9 @@ def adjust_multifasta_format(multifasta_file, multifasta_data, pdb_seq,
             for pdb in wrong_pdb:
                 pdb_index = pdb_codes.index(pdb)
                 corrected_fasta.write(">{0}{1}{2}{1}".format(
-                            head, os.linesep,
-                            "{0}".format(os.linesep).join(
-                                textwrap.wrap(
-                                    get_pdb_sequence(pdb_files[pdb_index],
-                                                     seqdict), 80))))
+                            pdb, os.linesep, "{0}".format(os.linesep).join(
+                                textwrap.wrap(get_pdb_sequence(
+                                    pdb_files[pdb_index], seqdict), 80))))
     except IOError:
         sys.exit("Error cannot open {0}".format(corrected_fasta_file))
     return corrected_fasta_file
