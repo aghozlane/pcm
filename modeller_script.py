@@ -214,8 +214,8 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h".format(sys.argv[0]))
     parser.add_argument("-l", "--list_operations",
-                        default=["model", "profile"], type=str, nargs='+',
-                        choices=["model", "profile", "check"],
+                        default=["model", "profile", "check"], type=str,
+                        nargs='+', choices=["model", "profile", "check"],
                         help="Select the operations : model and/or profile "
                         "and/or structure checking (default : both modeling "
                         "and profile are done)")
