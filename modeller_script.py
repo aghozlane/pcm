@@ -344,10 +344,7 @@ def get_pdb(conf_data, pdb_list, results):
         # Correspond to a PDB file
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            pdb_files += [download_pdb(
-                             conf_data, ".".join(os.path.basename(pdb)
-                                                 .split(".")[:-1]),
-                             results)]
+            pdb_files += [download_pdb(conf_data, pdb, results)]
         # Download corresponding pdb
         else:
             pdb_codes += [".".join(os.path.basename(pdb).split(".")[:-1])]
