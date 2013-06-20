@@ -235,7 +235,6 @@ def get_arguments():
     parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize.')
     parser.add_argument('-g', '--path_alignment', type=isdir,
-                        default="",
                         help='Path to the alignment software.')
     parser.add_argument('-n', '--number_model', type=int, default=8,
                         help='Number of model to produce.')
@@ -383,7 +382,11 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
       Command to execute.
     """
     print(build_command, file=sys.stderr)
-    build_command = build_command.replace('%path_soft', path_soft)
+    if path_soft:
+        build_command = build_command.replace('%path_soft', path_soft)
+    else:
+        build_command = build_command.replace('%path_soft', "")
+
     if thread:
         build_command = build_command.replace('%proc', str(thread))
     else:
