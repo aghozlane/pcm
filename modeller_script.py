@@ -1116,7 +1116,7 @@ def plot_DOPE_profile(list_template, list_model, list_model_files, sessionid,
               for i in xrange(len(list_model))]
     for t in xrange(len(list_template)):
         # Plot the template and model profiles in the same plot for comparison:
-        fig = plt.figure(figsize=(10, 7))
+        fig = plt.figure(figsize=(20, 7))
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.set_xlabel('Alignment position')
         ax1.set_ylabel('DOPE score per-residue')
@@ -1164,7 +1164,7 @@ def plot_DOPE_profile_all(list_template, list_model, list_model_files,
     colors = [color_map(1. * i / (len(list_model) + len(list_template)))
               for i in xrange(len(list_model) + len(list_template))]
     # Plot the template and model profiles in the same plot for comparison:
-    fig = plt.figure(figsize=(10, 7))
+    fig = plt.figure(figsize=(20, 7))
     ax1 = fig.add_subplot(1, 1, 1)
     ax1.set_xlabel('Alignment position')
     ax1.set_ylabel('DOPE score per-residue')
@@ -1231,7 +1231,7 @@ def plot_partial_DOPE_profile(list_template, list_model, list_model_files,
                 assert(len(list_model[j]) == len(list_template[i]))
                 # Plot the template and model profiles
                 # in the same plot for comparison:
-                fig = plt.figure(figsize=(10, 7))
+                fig = plt.figure(figsize=(20, 7))
                 ax1 = fig.add_subplot(1, 1, 1)
                 ax1.set_xlabel('Alignment position')
                 ax1.set_ylabel('DOPE score per-residue')
@@ -1293,7 +1293,7 @@ def plot_delta_DOPE_profile(list_delta_dope, list_model_files,
     # Plot models
     for i in xrange(len(list_delta_dope)):
         # Plot the template and model profiles in the same plot for comparison:
-        fig = plt.figure(figsize=(10, 7))
+        fig = plt.figure(figsize=(20, 7))
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.set_xlabel('Alignment position')
         ax1.set_ylabel('delta DOPE per-residue score')
