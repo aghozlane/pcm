@@ -1641,7 +1641,7 @@ def write_checking(data, title, filename):
 
 
 def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
-                          sessionid):
+                          sessionid, ylabel, type_data):
     """
     """
     pdb_files = []
@@ -1654,7 +1654,7 @@ def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
     fig = plt.figure(figsize=(30, 7))
     ax1 = fig.add_subplot(1, 1, 1)
     ax1.set_xlabel('Residue number')
-    ax1.set_ylabel('Raw score per-residue')
+    ax1.set_ylabel(ylabel)
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
         if num_struct >= number_best:
             break
@@ -1670,8 +1670,8 @@ def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
          loc="upper center", numpoints=1,
          bbox_to_anchor=(0.5, 1.12),
          ncol=3, fancybox=True, shadow=True)
-    plt.savefig(results + os.sep + "verify3D_profile_{0}.svg"
-                .format(sessionid))
+    plt.savefig(results + os.sep + "verify3D_profile_{0}_{1}.svg"
+                .format(type_data, sessionid))
     plt.clf()
 
 
@@ -1843,11 +1843,13 @@ def main():
         if data_verify3D:
             plot_verify3D_profile(summary_data, data_verify3D,
                                   args.number_best, args.results,
-                                  sessionid)
+                                  sessionid, "Raw score per-residue",
+                                  "raw")
         if data_verify3D_smooth:
             plot_verify3D_profile(summary_data, data_verify3D_smooth,
                                   args.number_best, args.results,
-                                  sessionid)
+                                  sessionid, "Average score per-residue",
+                                  "avg")
     elif args.structure_check and not os.path.isfile(summary_file):
         sys.exit("Summary file is required for structure checking")
 
