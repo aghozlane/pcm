@@ -1552,18 +1552,18 @@ def run_verify3D(website_path, pdb, results):
         data_verify3D = load_verify3D(req2.text)
         # Write verify3D data
         write_checking(data_verify3D, ["Residue", "Position", "Score"],
-                       results + "verify3D_raw"
+                       results + "verify3D_raw_"
                        + ".".join(os.path.basename(pdb).split(".")[:-1])
                        + ".txt")
     else:
         sys.exit("No data received from verify3D")
     if(req3):
         # Load verify3D data
-        data_verify3D_smooth = load_verify3D(req2.text, 1)
+        data_verify3D_smooth = load_verify3D(req3.text, 1)
         # Write verify3D data
         write_checking(data_verify3D_smooth,
                        ["Residue", "Position", "Average score"],
-                       results + "verify3D_smooth"
+                       results + "verify3D_avg_"
                        + ".".join(os.path.basename(pdb).split(".")[:-1])
                        + ".txt")
     else:
