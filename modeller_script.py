@@ -125,26 +125,26 @@ class ModelingConfig:
                         "http://www.rcsb.org/pdb/files/")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
-                        "%path_soft{0}clustalo -i %multifasta -o %output "
+                        "%path_softclustalo -i %multifasta -o %output "
                         "--threads=%proc --auto -t Protein "
-                        "--outfmt=fa".format(os.sep))
+                        "--outfmt=fa")
         self.config.set('Alignment_config', 'clustalw2',
-                        "%path_soft{0}clustalw2 -INFILE=%multifasta "
-                        "-OUTPUT=PIR -OUTFILE=%output".format(os.sep))
+                        "%path_softclustalw2 -INFILE=%multifasta "
+                        "-OUTPUT=PIR -OUTFILE=%output")
         self.config.set('Alignment_config', 'mafft',
-                        "%path_soft{0}mafft --auto --thread %proc "
-                        "%multifasta > %output".format(os.sep))
+                        "%path_softmafft --auto --thread %proc "
+                        "%multifasta > %output")
         self.config.set('Alignment_config', 'muscle',
-                        "%path_soft{0}muscle -in %multifasta "
-                        "-out %output".format(os.sep))
+                        "%path_softmuscle -in %multifasta "
+                        "-out %output")
         self.config.set('Alignment_config', 't_coffee',
-                        "%path_soft{0}t_coffee %multifasta "
+                        "%path_softt_coffee %multifasta "
                         "-outfile %output -output pir_aln  "
-                        "-n_core %proc".format(os.sep))
+                        "-n_core %proc")
         # -mode 3dcoffee -template_file %pdb
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
-                        "%path_soft{0}procheck.scr %pdb 1.5".format(os.sep))
+                        "%path_softprocheck.scr %pdb 1.5")
         self.config.set('Checking_config', 'proq',
                         "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
         self.config.set('Checking_config', 'prosa',
@@ -235,7 +235,7 @@ def get_arguments():
     parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize.')
     parser.add_argument('-g', '--path_alignment', type=isdir,
-                        default=local_path,
+                        default="",
                         help='Path to the alignment software.')
     parser.add_argument('-n', '--number_model', type=int, default=8,
                         help='Number of model to produce.')
@@ -261,7 +261,7 @@ def get_arguments():
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results).')
-    parser.add_argument('-k', '--path_check', type=isdir, default=local_path,
+    parser.add_argument('-k', '--path_check', type=isdir, default="",
                         help='Indicate the path to procheck software.')
     parser.add_argument('-sb', '--number_best', type=int, default=5,
                         help='Select number of models for verification'
@@ -1476,11 +1476,13 @@ def run_prosa(website_path, pdb, results):
     return [pdb, zscore]
 
 
-def load_verify3D(verify3D_result):
+def load_verify3D(verify3D_result, type_data=0):
     """
     """
-    regex_verify = re.compile(r"^raw\s+([A-Z])\s+([0-9]+)\s+([0-9.-]+)\s+"
-                             "([0-9.-]+)")
+    request = r"^[a-z]+\s+([A-Z])\s+([0-9]+)\s+[0-9.-]+\s+([0-9.-]+)"
+    if(type_data):
+        request = r"^[a-z]+\s+([A-Z])\s+([0-9]+)\s+([0-9.-]+)"
+    regex_verify = re.compile(request)
     data_verify3D = []
     try:
         for line in verify3D_result.split(os.linesep):
@@ -1489,8 +1491,7 @@ def load_verify3D(verify3D_result):
                 # Residue Position First_score Second_score
                 data_verify3D += [[match_verify.group(1),
                                    int(match_verify.group(2)),
-                                   float(match_verify.group(3)),
-                                   float(match_verify.group(4))]]
+                                   float(match_verify.group(3))]]
         assert(len(data_verify3D) > 0)
     except ValueError:
         sys.exit("There is something wrong with :" + os.linesep
@@ -1530,23 +1531,37 @@ def run_verify3D(website_path, pdb, results):
                      results + "verify3D_"
                      + ".".join(os.path.basename(pdb).split(".")[:-1])
                      + ".png")
-        # Download result file
+        # Download raw score
         req2 = requests.get(website_path + "temp/raw" + ver + ".dat?",
+                            headers=headers)
+        # Download average score
+        req3 = requests.get(website_path + "temp/avg" + ver + ".dat?",
                             headers=headers)
     else:
         sys.exit("No data received from verify3D")
+
     if(req2):
         # Load verify3D data
         data_verify3D = load_verify3D(req2.text)
         # Write verify3D data
-        write_checking(data_verify3D, ["Residue", "Position", "Score 1",
-                                       "Score 2"],
-                       results + "verify3D_"
+        write_checking(data_verify3D, ["Residue", "Position", "Score"],
+                       results + "verify3D_raw"
                        + ".".join(os.path.basename(pdb).split(".")[:-1])
                        + ".txt")
     else:
         sys.exit("No data received from verify3D")
-    return data_verify3D
+    if(req3):
+        # Load verify3D data
+        data_verify3D_smooth = load_verify3D(req2.text, 1)
+        # Write verify3D data
+        write_checking(data_verify3D_smooth,
+                       ["Residue", "Position", "Average score"],
+                       results + "verify3D_smooth"
+                       + ".".join(os.path.basename(pdb).split(".")[:-1])
+                       + ".txt")
+    else:
+        sys.exit("No data received from verify3D")
+    return data_verify3D, data_verify3D_smooth
 
 
 def run_checking(conf_data, summary_data, structure_check, path_check,
@@ -1559,6 +1574,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
     data_proq = []
     data_prosa = []
     data_verify3D = {}
+    data_verify3D_smooth = {}
     num_struct = 0
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
         if num_struct >= number_best:
@@ -1594,14 +1610,15 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
         if('verify3D' in structure_check and REQUESTS):
             print("Run verify3D for " + pdb[0])
             try:
-                data_verify3D[pdb[0]] = run_verify3D(
+                (data_verify3D[pdb[0]],
+                 data_verify3D_smooth[pdb[0]]) = run_verify3D(
                                             conf_data.hdict['verify3D'],
                                             pdb[0], results)
             except requests.exceptions.ConnectionError:
                 print("Error cannot connect to Verify3D", file=sys.stderr)
                 data_verify3D = {}
         num_struct += 1
-    return data_proq, data_prosa, data_verify3D
+    return data_proq, data_prosa, data_verify3D, data_verify3D_smooth
 
 
 def write_checking(data, title, filename):
@@ -1637,7 +1654,7 @@ def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
         # Plot templates
         ax1.plot(
             [element[1] for element in data_verify3D[pdb[0]]],
-            [element[3] for element in data_verify3D[pdb[0]]],
+            [element[2] for element in data_verify3D[pdb[0]]],
             color=colors[num_struct], linewidth=1, label=pdb[0])
         num_struct += 1
         pdb_files += [pdb[0]]
@@ -1802,7 +1819,8 @@ def main():
         if args.number_best > args.number_model:
             args.number_best = args.number_model
         # Start structure checking
-        data_proq, data_prosa, data_verify3D = run_checking(
+        (data_proq, data_prosa,
+         data_verify3D, data_verify3D_smooth) = run_checking(
                                         conf_data, summary_data,
                                         args.structure_check, args.path_check,
                                         args.number_best, pred,
@@ -1819,7 +1837,10 @@ def main():
             plot_verify3D_profile(summary_data, data_verify3D,
                                   args.number_best, args.results,
                                   sessionid)
-
+        if data_verify3D_smooth:
+            plot_verify3D_profile(summary_data, data_verify3D_smooth,
+                                  args.number_best, args.results,
+                                  sessionid)
     elif args.structure_check and not os.path.isfile(summary_file):
         sys.exit("Summary file is required for structure checking")
 
