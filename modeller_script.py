@@ -229,18 +229,21 @@ def get_arguments():
                         choices=["clustalw2", "clustalo", "mafft", "muscle",
                                  "t_coffee"],
                         help="Indicates the software that should be used to "
-                        "align sequences.")
+                        "align sequences (Default = clustalo).")
     parser.add_argument('-p', '--pdb', type=str, nargs='+',
                         help="List of pdb files or codes to use as template.")
     parser.add_argument('-e', '--model_name', type=str,
-                        help='Code of the sequence to modelize.')
-    parser.add_argument('-g', '--path_alignment', type=isdir,
+                        help='Code of the sequence to modelize (required if '
+                        'several sequence with no structure associated are '
+                        'present in the multifasta).')
+    parser.add_argument('-g', '--path_alignment', type=isdir, default=None,
                         help='Path to the alignment software.')
     parser.add_argument('-n', '--number_model', type=int, default=8,
-                        help='Number of model to produce.')
+                        help='Number of model to produce (default = 8).')
     parser.add_argument('-q', '--model_quality', type=str, default="fast",
                         choices=["very_fast", "fast", "normal", "max"],
-                        help='Adjust the quality of the modeling.')
+                        help='Adjust the quality of the modeling (default = '
+                        'fast).')
     parser.add_argument('-ht', '--add_heteroatom', type=int, default=0,
                         help="Indicates the number of hetero-atom residue(s) "
                         "that should be added to the alignment software.")
@@ -250,7 +253,8 @@ def get_arguments():
                         "residue(s) should be added to the alignment "
                         "software.")
     parser.add_argument('-d', '--psipred', type=isfile,
-                        help='Psipred file (*.psipass2).')
+                        help='Psipred file used for modeling and checking the '
+                        'model structures (*.psipass2).')
     parser.add_argument('-b', '--limit_confidence', type=islimit, default=7,
                         help='Confidence limit for psipred'
                         '(0-9 - default = >7).')
@@ -260,7 +264,7 @@ def get_arguments():
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results).')
-    parser.add_argument('-k', '--path_check', type=isdir, default="",
+    parser.add_argument('-k', '--path_check', type=isdir, default=None,
                         help='Indicate the path to procheck software.')
     parser.add_argument('-sb', '--number_best', type=int, default=5,
                         help='Select number of models for verification'
@@ -271,14 +275,14 @@ def get_arguments():
                         'alignment file) for checking.')
     parser.add_argument('-r', '--results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
-                        'directory is prefered default due to modeller '
-                        'constraint).')
+                        'directory is preferred because of modeller '
+                        'function).')
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file.')
     parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
-                        help='Number of thread '
-                        '(Default = all cpus available will be used).')
+                        help='Number of thread (Default = all cpus available '
+                        'will be used).')
     parser.add_argument('-c', '--config', type=isfile,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
