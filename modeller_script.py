@@ -280,35 +280,12 @@ def get_arguments():
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file.')
-    parser.add_argument('-t', '--thread', default=detect_cpus(), type=int,
+    parser.add_argument('-t', '--thread', default=mp.cpu_count(), type=int,
                         help='Number of thread (Default = all cpus available '
                         'will be used).')
     parser.add_argument('-c', '--config', type=isfile,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
-
-
-def detect_cpus():
-    """
-    Detects the number of CPUs on a system. Cribbed from pp.
-    """
-    # Linux, Unix and MacOS: # Linux, Unix and MacOS:
-    if hasattr(os, "sysconf"):
-        if "SC_NPROCESSORS_ONLN" in os.sysconf_names:
-            # Linux & Unix: # Linux and Unix:
-            ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
-            if isinstance(ncpus, int) and ncpus > 0:
-                return ncpus
-            # OSX:
-            else:
-                return int(os.popen2("sysctl -n hw.ncpu")[1].read())
-        # Windows:
-        if "NUMBER_OF_PROCESSORS" in os.environ:
-            ncpus = int(os.environ["NUMBER_OF_PROCESSORS"])
-            if ncpus > 0:
-                return ncpus
-    # Default 1
-    return 1
 
 
 def download_pdb(conf_data, pdb, results):
@@ -394,7 +371,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
     if thread:
         build_command = build_command.replace('%proc', str(thread))
     else:
-        build_command = build_command.replace('%proc', str(detect_cpus()))
+        build_command = build_command.replace('%proc', str(mp.cpu_count()))
     build_command = build_command.replace('%multifasta', multifasta_file)
     build_command = build_command.replace('%pdb', " ".join(pdb_files))
     build_command = build_command.replace('%output', output)
@@ -1094,13 +1071,13 @@ def get_session_id(idfile):
     return session_id
 
 
-def load_profiles(pdb_files, pdb_codes, alignment_file, thread, results):
+def load_profiles(pdb_files, pdb_codes, alignment_file, process, results):
     """Compute and load the profile of each model
     """
     list_run = [[pdb_files[i], (results + pdb_codes[i] + '.profile'),
                  alignment_file]
                 for i in xrange(len(pdb_files))]
-    pool = mp.Pool(processes=thread)
+    pool = mp.Pool(processes=process)
     asyncResult = pool.map_async(compute_profile, list_run)
     profile = asyncResult.get()
     return [i[0] for i in profile], [i[1] for i in profile]
