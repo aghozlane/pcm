@@ -1671,7 +1671,7 @@ def main():
     # Load parameters
     args, parser = get_arguments()
     if (("profile" in args.list_operations
-        or "model" in args.list_operations) and len(args.pdb) == 0):
+        or "model" in args.list_operations) and not args.pdb):
         print("You must provide at least one structure template "
               "for modeling and/or profiling", file=sys.stderr)
         sys.exit(parser.print_help())
@@ -1795,8 +1795,8 @@ def main():
             sys.exit("{0} does not exist".format(summary_file))
     if args.structure_check and os.path.isfile(summary_file):
         if not args.psipred and "proq" in args.structure_check:
-            print("It is recommanded to provide secondary structure prediction"
-                  " using psipred to use ProQ.")
+            print("It is recommanded to provide the secondary structure "
+                  "prediction using psipred to use ProQ.")
         # Histogram of DOPE
         summary_data = load_summary(summary_file)
         # Check number of model
