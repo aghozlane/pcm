@@ -767,7 +767,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
                                                    multifasta_data, pdb_seq,
                                                    wrong_pdb, pdb_codes,
                                                    pdb_files, seqdict, results)
-    return multifasta_file
+    return multifasta_file, multifasta_data
 
 
 def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
@@ -891,10 +891,10 @@ def write_extract_fasta(multifasta_data, model):
     return out_file
 
 
-def run_secondary_structure_pred(conf_data, multifasta, model, path_psipred):
+def run_secondary_structure_pred(conf_data, multifasta_data, model,
+                                 path_psipred):
     """
     """
-    multifasta_data = get_multifasta_data(multifasta)
     fasta_file = write_extract_fasta(multifasta_data, model)
     run_command(replace_motif(conf_data.hdict['psipred'], path_psipred, "", "",
                               "", "", "", fasta_file))
@@ -1713,6 +1713,7 @@ def main():
     """
     Main program function
     """
+    multifasta_data = None
     conf = None
     pred = None
     psipred_result = None
@@ -1737,7 +1738,8 @@ def main():
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
         print("Run alignment")
-        args.multifasta_file = check_multifasta(args.multifasta_file,
+        (args.multifasta_file,
+         multifasta_data) = check_multifasta(args.multifasta_file,
                                                 pdb_codes, pdb_files, seqdict,
                                                 args.disable_autocorrect,
                                                 args.results)
@@ -1762,10 +1764,10 @@ def main():
         and not args.model_name):
         args.model_name = get_model(args.alignment_file, pdb_codes)
     # Run psipred
-    if args.path_psipred and args.multifasta_file:
+    if args.path_psipred and multifasta_data:
         print("Run psipred")
         args.psipred = run_secondary_structure_pred(conf_data,
-                                                    args.multifasta_file,
+                                                    multifasta_data,
                                                     args.model_name,
                                                     args.path_psipred)
     elif args.path_psipred and not args.multifasta_file:
