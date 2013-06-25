@@ -361,7 +361,7 @@ def run_command(cmd):
 
 
 def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
-                  output, thread, psipred):
+                  output, thread, psipred, fasta):
     """Set the software command
      :Parameters:
          build_command: Command
@@ -387,6 +387,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
     build_command = build_command.replace('%pdb', " ".join(pdb_files))
     build_command = build_command.replace('%output', output)
     build_command = build_command.replace('%psipred', psipred)
+    build_command = build_command.replace('%fasta', fasta)
     print(build_command, file=sys.stderr)
     return build_command
 
