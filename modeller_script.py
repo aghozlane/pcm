@@ -879,8 +879,7 @@ def write_extract_fasta(multifasta_data, model):
     elif(len(multifasta_data) > 1 and not model):
         sys.exit("The program has failed to extract the fasta "
                  "sequence for psipred.{0}Please, indicate the "
-                 "name of the model \"{1}\"".format(os.linesep,
-                                                    model))
+                 "name of the model".format(os.linesep))
     out_file = model + '_psipred.fasta'
     try:
         with open(out_file, "wt") as out:
@@ -891,7 +890,7 @@ def write_extract_fasta(multifasta_data, model):
         sys.exit("Error cannot open {0}".format(out_file))
     except KeyError:
         sys.exit("The program has failed to extract the fasta sequence of "
-                 "\"{0}\".{1}Check the multifasta file.".format(os.linesep))
+                 ".{1}Check the multifasta file.".format(os.linesep))
     return out_file
 
 
