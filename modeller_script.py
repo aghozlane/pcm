@@ -384,8 +384,11 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
     else:
         build_command = build_command.replace('%proc', str(mp.cpu_count()))
     build_command = build_command.replace('%multifasta', multifasta_file)
-    if(len(pdb_files) > 0):
-        build_command = build_command.replace('%pdb', " ".join(pdb_files))
+    try:
+        if(len(pdb_files) > 0):
+            build_command = build_command.replace('%pdb', " ".join(pdb_files))
+    except TypeError:
+        pass
     build_command = build_command.replace('%output', output)
     build_command = build_command.replace('%psipred', psipred)
     build_command = build_command.replace('%fasta', fasta)
