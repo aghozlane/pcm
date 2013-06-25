@@ -642,15 +642,23 @@ def get_multifasta_data(multifasta_file):
     regex_head = re.compile(r"^>([\w-]+)")
     regex_protein = re.compile(r"^([A-Za-z]+)")
     multifasta_data = {}
-    with open(multifasta_file) as multifasta:
-        for line in multifasta:
-            match_head = regex_head.match(line)
-            match_protein = regex_protein.match(line)
-            if match_head:
-                head = match_head.group(1)
-                multifasta_data[head] = ""
-            elif match_protein:
-                multifasta_data[head] += match_protein.group(1)
+    try:
+        with open(multifasta_file, "rt") as multifasta:
+            for line in multifasta:
+                match_head = regex_head.match(line)
+                match_protein = regex_protein.match(line)
+                if match_head:
+                    head = match_head.group(1)
+                    multifasta_data[head] = ""
+                elif match_protein:
+                    multifasta_data[head] += match_protein.group(1)
+        for seq_head in multifasta_data:
+            assert(len(multifasta_data[seq_head]) > 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(multifasta_file))
+    except AssertionError:
+        sys.exit("The program has faild to extract the sequence of "
+                 "\"{0}\".".format(seq_head))
     return multifasta_data
 
 
@@ -855,43 +863,38 @@ def get_parallel(process):
     return job_worker
 
 
-def extract_fasta(multifasta_file, model):
+def write_extract_fasta(multifasta_data, model):
     """
     """
-    seq_len = 0
-    activate_read = False
     out_file = model + '_psipred.fasta'
-    regex_entry = re.compile("^(>{0})".format(model))
-    regex_seq = re.compile("^([A-Za-z]+)".format(model))
     try:
-        with open(multifasta_file, "rt") as multifasta:
-            with open(out_file, "wt") as out:
-                for line in multifasta:
-                    match_entry = regex_entry.match(line)
-                    match_regex = regex_seq.match(line)
-                    if match_entry:
-                        activate_read = True
-                        out.write(line.group(1))
-                    elif match_regex and activate_read:
-                        out.write("{0}".format(os.linesep).join(
-                            textwrap.wrap(line.group(1), 80)))
-                        seq_len += len(line.group(1))
-                    else:
-                        break
-        assert(seq_len > 0)
-    except IOError as e:
-        sys.exit("Error cannot open {0}".format(e))
-    except AssertionError:
-        sys.exit("The program has failed to extract the fasta sequence for "
-                 "psipred, please check the multifasta file \"{0}\" or "
-                 "indicate the write model \"{1}\"".format(multifasta_file,
-                                                           model))
+        with open(out_file, "wt") as out:
+            if len(multifasta_data) == 1 and not model:
+                model = multifasta_data.keys()[0]
+                print("Warning model name is not indicated.{0}\"{1}\" "
+                      "sequence is considered for psipred"
+                      " prediction".format(os.linesep, model))
+            elif(len(multifasta_data) > 1 and not model):
+                sys.exit("The program has failed to extract the fasta "
+                         "sequence for psipred.{0}Please, indicate the "
+                         "name of the model \"{1}\"".format(os.linesep,
+                                                            model))
+            out.write(">{0}".format(model))
+            out.write("{0}".format(os.linesep).join(
+                textwrap.wrap(multifasta_data[model], 80)))
+    except IOError:
+        sys.exit("Error cannot open {0}".format(out_file))
+    except KeyError:
+        sys.exit("The program has failed to extract the fasta sequence of "
+                 "\"{0}\".{1}Check the multifasta file.".format(os.linesep))
     return out_file
+
 
 def run_secondary_structure_pred(conf_data, multifasta, model, path_psipred):
     """
     """
-    fasta_file = extract_fasta(multifasta, model)
+    multifasta_data = get_multifasta_data(multifasta)
+    fasta_file = write_extract_fasta(multifasta_data, model)
     run_command(replace_motif(conf_data.hdict['psipred'], path_psipred, "", "",
                               "", "", "", fasta_file))
     return fasta_file.replace(".fasta", ".horiz")
@@ -1727,13 +1730,6 @@ def main():
         sys.exit(parser.print_help())
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
-    # Run psipred
-    if args.path_psipred:
-        args.psipred = run_secondary_structure_pred(args.path_psipred)
-    # Load psipred file
-    if args.psipred:
-        conf, pred = load_psipred(args.psipred)
-        psipred_result = cluster_psipred(conf, pred, args.limit_confidence)
     # Prepare modeling
     if ("profile" in args.list_operations or "model" in args.list_operations):
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
@@ -1763,6 +1759,19 @@ def main():
     if (("profile" in args.list_operations or "model" in args.list_operations)
         and not args.model_name):
         args.model_name = get_model(args.alignment_file, pdb_codes)
+    # Run psipred
+    if args.path_psipred and args.multifasta_file:
+        args.psipred = run_secondary_structure_pred(conf_data,
+                                                    args.multifasta_file,
+                                                    args.model_name,
+                                                    args.path_psipred)
+    elif args.path_psipred and not args.multifasta_file:
+        sys.exit("Please indicate the path to multifasta/fasta file containing"
+                 " the sequence of the protein of interest")
+    # Load psipred file
+    if args.psipred:
+        conf, pred = load_psipred(args.psipred)
+        psipred_result = cluster_psipred(conf, pred, args.limit_confidence)
     # Get session id
     if args.alignment_file:
         sessionid = get_session_id(args.alignment_file)
