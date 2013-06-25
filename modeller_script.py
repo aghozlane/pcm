@@ -1751,13 +1751,16 @@ def main():
                                                     args.disable_autocorrect,
                                                     args.results)
         print("Run alignment")
-        args.alignment_file = run_alignment(conf_data, args.multifasta_file,
-                                            pdb_codes, pdb_files,
-                                            args.alignment_software,
-                                            args.path_alignment,
-                                            args.add_heteroatom,
-                                            args.heteroatom_models,
-                                            args.thread, args.results)
+        if ("profile" in args.list_operations
+            or "model" in args.list_operations):
+            args.alignment_file = run_alignment(conf_data,
+                                                args.multifasta_file,
+                                                pdb_codes, pdb_files,
+                                                args.alignment_software,
+                                                args.path_alignment,
+                                                args.add_heteroatom,
+                                                args.heteroatom_models,
+                                                args.thread, args.results)
     elif args.multifasta_file and args.alignment_file:
         sys.exit("You have provided an alignment and the multifasta "
                  "which indicates to compute the alignment. "
