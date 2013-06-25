@@ -110,6 +110,8 @@ class ModelingConfig:
                                                'muscle')
         self.hdict["t_coffee"] = self.config.get('Alignment_config',
                                                  't_coffee')
+        self.hdict["psipred"] = self.config.get('Secondary_structure_config',
+                                                'psipred')
         self.hdict["procheck"] = self.config.get('Checking_config',
                                                  'procheck')
         self.hdict["prosa"] = self.config.get('Checking_config', 'prosa')
@@ -141,6 +143,9 @@ class ModelingConfig:
                         "%path_softt_coffee %multifasta "
                         "-outfile %output -output pir_aln  "
                         "-n_core %proc")
+        self.config.add_section('Secondary_structure_config')
+        self.config.set('Secondary_structure_config', 'psipred',
+                        "%path_softrunpsipred %fasta ")
         # -mode 3dcoffee -template_file %pdb
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
@@ -252,6 +257,8 @@ def get_arguments():
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
                         "software.")
+    parser.add_argument('-p', '--path_psipred', type=isdir,
+                        help='Path to Psipred software.')
     parser.add_argument('-d', '--psipred', type=isfile,
                         help='Psipred file used for modeling and checking the '
                         'model structures (*.psipass2).')
@@ -469,10 +476,6 @@ def adjust_PIR_format(aln_pir_file, data_dict, pdb_codes, pdb_files,
                     if element in pdb_codes:
                         type_data = "structureX"
                         structure_present = True
-#                         pdb_index = pdb_codes.index(element)
-                        # Identify start postion
-#                         pdb_start_posit = get_start_position(
-#                                             pdb_files[pdb_index])
                     sequence = data_dict[element][1].replace("-", "")
                     sequence = sequence.replace(os.linesep, "")
                     sequence = sequence.replace("*", "")
@@ -777,13 +780,13 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
     if alignment_software in ("t_coffee", "clustalw2"):
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_pir_file, thread, ""))
+                                  aln_pir_file, thread, "", ""))
     else:
         aln_fasta_file = (results + alignment_software + "_"
                           + str(os.getpid()) + "_aln.fasta")
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_fasta_file, thread, ""))
+                                  aln_fasta_file, thread, "", ""))
         data_fasta = get_fasta_data(aln_fasta_file)
         write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                        add_heteroatom, heteroatom_models)
@@ -848,6 +851,48 @@ def get_parallel(process):
     return job_worker
 
 
+def extract_fasta(multifasta_file, model):
+    """
+    """
+    seq_len = 0
+    activate_read = False
+    out_file = model + '_psipred.fasta'
+    regex_entry = re.compile("^(>{0})".format(model))
+    regex_seq = re.compile("^([A-Za-z]+)".format(model))
+    try:
+        with open(multifasta_file, "rt") as multifasta:
+            with open(out_file, "wt") as out:
+                for line in multifasta:
+                    match_entry = regex_entry.match(line)
+                    match_regex = regex_seq.match(line)
+                    if match_entry:
+                        activate_read = True
+                        out.write(line.group(1))
+                    elif match_regex and activate_read:
+                        out.write("{0}".format(os.linesep).join(
+                            textwrap.wrap(line.group(1), 80)))
+                        seq_len += len(line.group(1))
+                    else:
+                        break
+        assert(seq_len > 0)
+    except IOError as e:
+        sys.exit("Error cannot open {0}".format(e))
+    except AssertionError:
+        sys.exit("The program has failed to extract the fasta sequence for "
+                 "psipred, please check the multifasta file \"{0}\" or "
+                 "indicate the write model \"{1}\"".format(multifasta_file,
+                                                           model))
+    return out_file
+
+def run_secondary_structure_pred(conf_data, multifasta, model, path_psipred):
+    """
+    """
+    fasta_file = extract_fasta(multifasta, model)
+    run_command(replace_motif(conf_data.hdict['psipred'], path_psipred, "", "",
+                              "", "", "", fasta_file))
+    return fasta_file.replace(".fasta", ".horiz")
+
+
 def load_psipred(psipred_file):
     """Load psipred data
      :Parameters:
@@ -860,9 +905,10 @@ def load_psipred(psipred_file):
     pred = []
     regex_conf = re.compile(r"^Conf:\s+([0-9]+)")
     regex_pred = re.compile(r"^Pred:\s+([ECH]+)")
-    if not psipred_file.endswith("psipass2"):
+    if (not psipred_file.endswith("psipass2")
+        or not psipred_file.endswith("horiz")):
         print("Warning :  the psipred file is supposed to be "
-              "in psipass2 format", file=sys.stderr)
+              "in PSIPRED HFORMAT format", file=sys.stderr)
     try:
         with open(psipred_file) as psipred:
             for line in psipred:
@@ -1568,7 +1614,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             run_command(replace_motif(conf_data.hdict['procheck'],
                                       path_check, "",
                                       [pdb[0]], "", "", ""))
-        if('proq' in structure_check):
+        if('proq' in structure_check and REQUESTS):
             print("Run ProQ for " + pdb[0])
             status = True
             try:
@@ -1677,6 +1723,9 @@ def main():
         sys.exit(parser.print_help())
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
+    # Run psipred
+    if args.path_psipred:
+        args.psipred = run_secondary_structure_pred(args.path_psipred)
     # Load psipred file
     if args.psipred:
         conf, pred = load_psipred(args.psipred)
