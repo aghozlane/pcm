@@ -39,12 +39,16 @@ try:
     from modeller.parallel import *
     from modeller.automodel import *
     from modeller.scripts import complete_pdb
-    from MyModel import RestraintModel
     MODELLER = True
 except ImportError:
     MODELLER = False
     print("Could not import modeller.{0}No modeling "
           "will be available".format(os.linesep), file=sys.stderr)
+try:
+    from MyModel import RestraintModel
+except ImportError:
+    sys.exit("modeller_script need to import MyModel.py, leave it in the same "
+             "directory as modeller_script.py")
 try:
     import matplotlib
     matplotlib.use('Agg')
