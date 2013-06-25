@@ -1714,6 +1714,8 @@ def main():
     """
     Main program function
     """
+    pdb_codes = None
+    pdb_files = None
     multifasta_data = None
     conf = None
     pred = None
