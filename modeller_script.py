@@ -767,7 +767,7 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
                                                    multifasta_data, pdb_seq,
                                                    wrong_pdb, pdb_codes,
                                                    pdb_files, seqdict, results)
-    return multifasta_file, multifasta_data
+    return multifasta_file
 
 
 def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
@@ -891,10 +891,11 @@ def write_extract_fasta(multifasta_data, model):
     return out_file
 
 
-def run_secondary_structure_pred(conf_data, multifasta_data, model,
+def run_secondary_structure_pred(conf_data, multifasta_file, model,
                                  path_psipred):
     """
     """
+    multifasta_data = get_multifasta_data(multifasta_file)
     fasta_file = write_extract_fasta(multifasta_data, model)
     run_command(replace_motif(conf_data.hdict['psipred'], path_psipred, "", "",
                               "", "", "", fasta_file))
@@ -914,7 +915,7 @@ def load_psipred(psipred_file):
     regex_conf = re.compile(r"^Conf:\s+([0-9]+)")
     regex_pred = re.compile(r"^Pred:\s+([ECH]+)")
     if (not psipred_file.endswith("psipass2")
-        or not psipred_file.endswith("horiz")):
+        and not psipred_file.endswith("horiz")):
         print("Warning :  the psipred file is supposed to be "
               "in PSIPRED HFORMAT format", file=sys.stderr)
     try:
@@ -1737,12 +1738,13 @@ def main():
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
+        if pdb_codes and pdb_files:
+            args.multifasta_file = check_multifasta(args.multifasta_file,
+                                                    pdb_codes, pdb_files,
+                                                    seqdict,
+                                                    args.disable_autocorrect,
+                                                    args.results)
         print("Run alignment")
-        (args.multifasta_file,
-         multifasta_data) = check_multifasta(args.multifasta_file,
-                                                pdb_codes, pdb_files, seqdict,
-                                                args.disable_autocorrect,
-                                                args.results)
         args.alignment_file = run_alignment(conf_data, args.multifasta_file,
                                             pdb_codes, pdb_files,
                                             args.alignment_software,
@@ -1764,7 +1766,7 @@ def main():
         and not args.model_name):
         args.model_name = get_model(args.alignment_file, pdb_codes)
     # Run psipred
-    if args.path_psipred and multifasta_data:
+    if args.path_psipred and args.multifasta_file:
         print("Run psipred")
         args.psipred = run_secondary_structure_pred(conf_data,
                                                     multifasta_data,
