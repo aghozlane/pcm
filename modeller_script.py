@@ -871,7 +871,6 @@ def get_parallel(process):
 def write_extract_fasta(multifasta_data, model):
     """
     """
-    out_file = model + '_psipred.fasta'
     if len(multifasta_data) == 1 and not model:
         model = multifasta_data.keys()[0]
         print("Warning model name is not indicated.{0}\"{1}\" "
@@ -882,6 +881,7 @@ def write_extract_fasta(multifasta_data, model):
                  "sequence for psipred.{0}Please, indicate the "
                  "name of the model \"{1}\"".format(os.linesep,
                                                     model))
+    out_file = model + '_psipred.fasta'
     try:
         with open(out_file, "wt") as out:
             out.write(">{0}".format(model))
