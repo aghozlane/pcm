@@ -868,18 +868,18 @@ def write_extract_fasta(multifasta_data, model):
     """
     """
     out_file = model + '_psipred.fasta'
+    if len(multifasta_data) == 1 and not model:
+        model = multifasta_data.keys()[0]
+        print("Warning model name is not indicated.{0}\"{1}\" "
+              "sequence is considered for psipred"
+              " prediction".format(os.linesep, model))
+    elif(len(multifasta_data) > 1 and not model):
+        sys.exit("The program has failed to extract the fasta "
+                 "sequence for psipred.{0}Please, indicate the "
+                 "name of the model \"{1}\"".format(os.linesep,
+                                                    model))
     try:
         with open(out_file, "wt") as out:
-            if len(multifasta_data) == 1 and not model:
-                model = multifasta_data.keys()[0]
-                print("Warning model name is not indicated.{0}\"{1}\" "
-                      "sequence is considered for psipred"
-                      " prediction".format(os.linesep, model))
-            elif(len(multifasta_data) > 1 and not model):
-                sys.exit("The program has failed to extract the fasta "
-                         "sequence for psipred.{0}Please, indicate the "
-                         "name of the model \"{1}\"".format(os.linesep,
-                                                            model))
             out.write(">{0}".format(model))
             out.write("{0}".format(os.linesep).join(
                 textwrap.wrap(multifasta_data[model], 80)))
