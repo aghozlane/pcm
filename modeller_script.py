@@ -261,7 +261,7 @@ def get_arguments():
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
                         "software.")
-    parser.add_argument('-p', '--path_psipred', type=isdir,
+    parser.add_argument('-j', '--path_psipred', type=isdir,
                         help='Path to Psipred software.')
     parser.add_argument('-d', '--psipred', type=isfile,
                         help='Psipred file used for modeling and checking the '
