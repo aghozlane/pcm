@@ -1720,7 +1720,6 @@ def main():
     """
     pdb_codes = None
     pdb_files = None
-    multifasta_data = None
     conf = None
     pred = None
     psipred_result = None
@@ -1778,7 +1777,7 @@ def main():
     if args.path_psipred and args.multifasta_file:
         print("Run psipred")
         args.psipred = run_secondary_structure_pred(conf_data,
-                                                    multifasta_data,
+                                                    args.multifasta_file,
                                                     args.model_name,
                                                     args.path_psipred)
     elif args.path_psipred and not args.multifasta_file:
