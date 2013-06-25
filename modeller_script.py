@@ -1762,6 +1762,7 @@ def main():
         args.model_name = get_model(args.alignment_file, pdb_codes)
     # Run psipred
     if args.path_psipred and args.multifasta_file:
+        print("Run psipred")
         args.psipred = run_secondary_structure_pred(conf_data,
                                                     args.multifasta_file,
                                                     args.model_name,
