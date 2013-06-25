@@ -1736,6 +1736,7 @@ def main():
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
+        print("Run alignment")
         args.multifasta_file = check_multifasta(args.multifasta_file,
                                                 pdb_codes, pdb_files, seqdict,
                                                 args.disable_autocorrect,
