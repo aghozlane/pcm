@@ -1621,7 +1621,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             print("Run procheck for " + pdb[0])
             run_command(replace_motif(conf_data.hdict['procheck'],
                                       path_check, "",
-                                      [pdb[0]], "", "", ""))
+                                      [pdb[0]], "", "", "", ""))
         if('proq' in structure_check and REQUESTS):
             print("Run ProQ for " + pdb[0])
             status = True
