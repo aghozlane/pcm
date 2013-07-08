@@ -291,7 +291,7 @@ def get_arguments():
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file.')
-    parser.add_argument('-m', '--list_atom', type=isfile, required=True,
+    parser.add_argument('-m', '--list_atom', type=isfile,
                         help='List of interest atom')
     parser.add_argument('-md', '--default_distances', type=isfile,
                         help='PDB file')
