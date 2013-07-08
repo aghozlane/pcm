@@ -684,13 +684,13 @@ def get_pdb_sequence(pdb_file, seqdict):
                 newres = line[22:26]
                 field = line[0:4]
                 if newres != res and field == "ATOM":
-                    pdb_seq += seqdict[aa]
                     res = newres
                     newchain = line[21:22]
                     if not chain:
                         chain = line[21:22]
                     if newchain != chain:
                         break
+                    pdb_seq += seqdict[aa]
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
     except TypeError:
@@ -760,7 +760,8 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
                 wrong_pdb.pop(wrong_pdb.index(head))
             else:
                 print("Warning : Amino-acid sequence in the PDB and in the "
-                      "multifasta file is different.", file=sys.stderr)
+                      "multifasta file for {0} is different.".format(head),
+                      file=sys.stderr)
                 check_wrong = True
         except ValueError:
             pass
