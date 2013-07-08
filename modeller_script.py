@@ -291,6 +291,10 @@ def get_arguments():
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file.')
+    parser.add_argument('-m', '--list_atom', type=isfile, required=True,
+                        help='List of interest atom')
+    parser.add_argument('-md', '--default_distances', type=isfile,
+                        help='PDB file')
     parser.add_argument('-t', '--thread', default=mp.cpu_count(), type=int,
                         help='Number of thread (Default = all cpus available '
                         'will be used).')
@@ -1710,6 +1714,151 @@ def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
     plt.clf()
 
 
+def load_interest_atom(interest_atom_file):
+    """
+    """
+    atom_dict = {}
+    try:
+        with open(interest_atom_file, "rt") as interest_atom:
+            reader = csv.reader(interest_atom, delimiter='\t')
+            for line in reader:
+                if len(line) == 3:
+                    atom_dict[(int(line[0]), line[1].upper(),
+                               line[2].upper())] = ""
+        assert(len(atom_dict) != 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(interest_atom_file))
+    except ValueError:
+        sys.exit("Error an integer is expected instead "
+                 "of : \"{0}\"".format(line[0]))
+    except AssertionError:
+        sys.exit("The load of the interest atom has failed,"
+                 " atom_dict is empty")
+    return atom_dict
+
+
+def load_PDB_interest_atom(pdb_file, interest_atom_dict):
+    """
+    """
+    atom_list = []
+    try:
+        with open(pdb_file, "rt") as pdb:
+            for line in pdb:
+                if line[0:6] == "ATOM  " or line[0:6] == "HETATM":
+                    residue_number = int(line[22:26])
+                    residue = line[17:20].replace(" ", "").upper()
+                    atom = line[11:16].replace(" ", "").upper()
+                    if(interest_atom_dict.has_key((residue_number,
+                                                  residue, atom))):
+                        atom_list += [["_".join([str(residue_number),
+                                                residue, atom]),
+                                      float(line[30:38]),
+                                      float(line[38:46]),
+                                      float(line[46:54])]]
+        assert(len(atom_list) != 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(pdb_file))
+    except ValueError:
+        sys.exit("Error an numeric value is expected instead "
+                 "of :{0}\"{1}\"".format(os.linesep, line))
+    except AssertionError:
+        sys.exit("The load of the interest atom has failed,"
+                 " atom_list is empty")
+    return atom_list
+
+
+def load_default_distances(default_distances_file):
+    """
+    """
+    default_distances_dict = {}
+    try:
+        with open(default_distances_file, "rt") as default_distances:
+            distances_reader = csv.reader(default_distances, delimiter='\t')
+            for line in distances_reader:
+                if len(line) == 3:
+                    default_distances_dict[(line[0].upper(),
+                                            line[1].upper())] = float(line[2])
+        assert(len(default_distances_dict) != 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(default_distances_file))
+    except ValueError:
+        sys.exit("Error an numeric value is expected instead "
+                 "of :{0}\"{1}\"".format(os.linesep, line))
+    except AssertionError:
+        sys.exit("The load of default distances has failed, dict is empty")
+    return default_distances_dict
+
+
+def get_distances(pdb_atom_list):
+    """
+    """
+    list_dist = []
+    for i in xrange(0, len(pdb_atom_list)):
+        for j in xrange(i + 1, len(pdb_atom_list)):
+            list_dist += [[pdb_atom_list[i][0], pdb_atom_list[j][0],
+                           math.sqrt(pow(pdb_atom_list[i][1]
+                                         - pdb_atom_list[j][1], 2.0) +
+                                     pow(pdb_atom_list[i][2]
+                                         - pdb_atom_list[j][2], 2.0) +
+                                     pow(pdb_atom_list[i][3]
+                                         - pdb_atom_list[j][3], 2.0))]]
+    return list_dist
+
+
+def write_distances(results, pdb_file, pdb_distances_list):
+    """
+    """
+    distances_out_file = (results +
+                          ".".join(os.path.basename(pdb_file).split(".")[:-1])
+                          + "_distances.csv")
+    try:
+        with open(distances_out_file, "wt") as distances_out:
+            distance_writer = csv.writer(distances_out, delimiter='\t')
+            distance_writer.writerow(["ATOM_1", "ATOM_2",
+                                      "Distance (angstrom)"])
+            distance_writer.writerows(pdb_distances_list)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(distances_out_file))
+
+
+def compute_distance_variation(pdb_distances_list, default_distances_dict):
+    """
+    """
+    distance_variation = []
+    try:
+        for element in pdb_distances_list:
+            if(default_distances_dict.has_key((element[0], element[1]))):
+                distance_variation += [abs(element[2] -
+                                           default_distances_dict[
+                                            (element[0], element[1])])]
+        assert(len(distance_variation) != 0)
+    except AssertionError:
+        sys.exit("The calculation of distance variation has failed."
+                 + os.linesep + "No element has been found in the atom list")
+    return distance_variation
+
+
+def run_check_distances(interest_atom_dict, default_distances, results,
+                        sessionid):
+    """
+    """
+    distance_variation = []
+    if default_distances:
+        default_distances_dict = load_default_distances(default_distances)
+    for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
+        pdb_atom_list = load_PDB_interest_atom(pdb[0], interest_atom_dict)
+        pdb_distances_list = get_distances(pdb_atom_list)
+        write_distances(results, pdb[0], pdb_distances_list)
+        if default_distances_dict:
+            distance_variation += [pdb[0],
+                                   compute_distance_variation(
+                                    pdb_distances_list,
+                                    default_distances_dict)]
+    write_checking(distance_variation, ["PDB", "Distance variation"],
+                   results + os.sep + "result_prosa_{0}.txt"
+                           .format(sessionid))
+
+
 #==============================================================
 # Main program
 #==============================================================
@@ -1885,6 +2034,10 @@ def main():
                                         args.structure_check, args.path_check,
                                         args.number_best, pred,
                                         REQUESTS, args.results)
+        if(args.list_atom):
+            interest_atom_dict = load_interest_atom(args.list_atom)
+            run_check_distances(interest_atom_dict, args.default_distances,
+                                args.results, sessionid)
         if data_proq:
             write_checking(data_proq, ["PDB", "maxsub", "lgscore"],
                            args.results + os.sep + "result_proq_{0}.txt"
