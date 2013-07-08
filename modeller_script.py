@@ -1768,7 +1768,7 @@ def load_PDB_interest_atom(pdb_file, interest_atom_dict):
 
 
 def load_default_distances(default_distances_file):
-    """
+    """Load distance file
     """
     default_distances_dict = {}
     try:
@@ -1790,7 +1790,7 @@ def load_default_distances(default_distances_file):
 
 
 def get_distances(pdb_atom_list):
-    """
+    """Compute distance between a list of atoms
     """
     list_dist = []
     for i in xrange(0, len(pdb_atom_list)):
@@ -1822,7 +1822,7 @@ def write_distances(results, pdb_file, pdb_distances_list):
 
 
 def compute_distance_variation(pdb_distances_list, default_distances_dict):
-    """
+    """Compute distance 
     """
     distance_variation = []
     try:
@@ -1840,20 +1840,26 @@ def compute_distance_variation(pdb_distances_list, default_distances_dict):
 
 def run_check_distances(interest_atom_dict, default_distances, results,
                         sessionid):
-    """
+    """Run distance checking
     """
     distance_variation = []
+    # Load default distances
     if default_distances:
         default_distances_dict = load_default_distances(default_distances)
+    # Check for each PDB the distances
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
+        # Load atom position
         pdb_atom_list = load_PDB_interest_atom(pdb[0], interest_atom_dict)
+        # Compute position
         pdb_distances_list = get_distances(pdb_atom_list)
+        # Write distances
         write_distances(results, pdb[0], pdb_distances_list)
         if default_distances_dict:
             distance_variation += [pdb[0],
                                    compute_distance_variation(
                                     pdb_distances_list,
                                     default_distances_dict)]
+    # Save distance variation
     write_checking(distance_variation, ["PDB", "Distance variation"],
                    results + os.sep + "result_prosa_{0}.txt"
                            .format(sessionid))
