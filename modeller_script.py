@@ -753,11 +753,11 @@ def check_multifasta(multifasta_file, pdb_codes, pdb_files, seqdict,
     # Check multifasta data and PDB
     for head in multifasta_data:
         try:
-            pdb_index = pdb_codes.index(head)
-            pdb_seq[head] = get_pdb_sequence(pdb_files[pdb_index], seqdict)
+            pdb_seq[head] = get_pdb_sequence(pdb_files[pdb_codes.index(head)],
+                                             seqdict)
             # IF PDB is OK
             if pdb_seq[head] == multifasta_data[head]:
-                wrong_pdb.pop(pdb_index)
+                wrong_pdb.pop(wrong_pdb.index(head))
             else:
                 print("Warning : Amino-acid sequence in the PDB and in the "
                       "multifasta file is different.", file=sys.stderr)
