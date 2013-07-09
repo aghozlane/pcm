@@ -624,16 +624,13 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                 sequence = data_fasta[element].replace("-", "")
                 sequence = sequence.replace(os.linesep, "")
                 if hetatm_flag:
-                    aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}".format(
-                                type_data, element, pdb_start_posit,
-                                pdb_start_posit - 1 + len(sequence) +
-                                add_heteroatom, ": " * 4, os.linesep))
+                    aln_pir.write("{0}:{1}: :A: :A{2}{3}".format(
+                                type_data, element, ": " * 4, os.linesep))
                     aln_pir.write("{0}{1}*{2}".format(data_fasta[element],
                                                      hetatm, os.linesep))
                 else:
-                    aln_pir.write("{0}:{1}:{2} :A:{3}:A{4}{5}"
-                                  .format(type_data, element, pdb_start_posit,
-                                          pdb_start_posit - 1 + len(sequence),
+                    aln_pir.write("{0}:{1}: :A: :A{2}{3}"
+                                  .format(type_data, element,
                                           ": " * 4, os.linesep))
                     aln_pir.write("{0}*{1}".format(data_fasta[element],
                                                   os.linesep))
