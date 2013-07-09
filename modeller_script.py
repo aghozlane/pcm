@@ -888,7 +888,7 @@ def write_extract_fasta(multifasta_data, model):
     out_file = model + '_psipred.fasta'
     try:
         with open(out_file, "wt") as out:
-            out.write(">{0}".format(model))
+            out.write(">{0}{1}".format(model, os.linesep))
             out.write("{0}".format(os.linesep).join(
                 textwrap.wrap(multifasta_data[model], 80)))
     except IOError:
