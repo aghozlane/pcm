@@ -6,6 +6,7 @@ class RestraintModel(automodel):
     def special_restraints(self, aln):
         rsr = self.restraints
         for struct in self.psipred_result:
+            # TODO check that it is the same residue
             # Constrain all residues to be alpha-helical
             if(struct[0] == "H"):
                 rsr.add(secondary_structure.alpha(

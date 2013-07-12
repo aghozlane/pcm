@@ -104,6 +104,9 @@ class ModelingConfig:
         # Get parameter value
         self.hdict["download_url"] = self.config.get('PDB_config',
                                                      'download_url')
+        self.hdict["hhsearch"] = self.config.get('PDB_config', 'hhsearch')
+        self.hdict["psiblast"] = self.config.get('PDB_config', 'psiblast')
+        self.hdict["jackhmmer"] = self.config.get('PDB_config', 'jackhmmer')
         self.hdict["clustalo"] = self.config.get('Alignment_config',
                                                  'clustalo')
         self.hdict["clustalw2"] = self.config.get('Alignment_config',
@@ -127,25 +130,32 @@ class ModelingConfig:
         """Write modeling config
         """
         self.config.add_section('PDB_config')
+#         self.config.set("PDB_config", "hhmake",
+#                         "%path_softhhsearch -i %multifasta  -d %database "
+#                         "-cpu %proc -o %output")
+        self.config.set("PDB_config", "hhsearch", "%path_softhhsearch "
+                        "-i %multifasta  -d %database -cpu %proc -o %output")
+        self.config.set("PDB_config", "psiblast", "%path_softpsiblast "
+                        "-query %multifasta -db %database -out %output "
+                        "-evalue 0.001 -outfmt 6 -num_threads %thread")
+        self.config.set("PDB_config", "jackhmmer", "%path_softjackhmmer "
+                        "--cpu %thread  -o %output %multifasta %database")
         self.config.set("PDB_config", "download_url",
                         "http://www.rcsb.org/pdb/files/")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_softclustalo -i %multifasta -o %output "
-                        "--threads=%proc --auto -t Protein "
-                        "--outfmt=fa")
+                        "--threads=%proc --auto -t Protein --outfmt=fa")
         self.config.set('Alignment_config', 'clustalw2',
                         "%path_softclustalw2 -INFILE=%multifasta "
                         "-OUTPUT=PIR -OUTFILE=%output")
         self.config.set('Alignment_config', 'mafft',
                         "%path_softmafft --auto --thread %proc "
                         "%multifasta > %output")
-        self.config.set('Alignment_config', 'muscle',
-                        "%path_softmuscle -in %multifasta "
-                        "-out %output")
-        self.config.set('Alignment_config', 't_coffee',
-                        "%path_softt_coffee %multifasta "
-                        "-outfile %output -output pir_aln  "
+        self.config.set('Alignment_config', 'muscle', "%path_softmuscle "
+                        "-in %multifasta -out %output")
+        self.config.set('Alignment_config', 't_coffee', "%path_softt_coffee "
+                        "%multifasta -outfile %output -output pir_aln "
                         "-n_core %proc")
         self.config.add_section('Secondary_structure_config')
         self.config.set('Secondary_structure_config', 'psipred',
@@ -226,8 +236,8 @@ def get_arguments():
                         default=["model", "profile", "check"], type=str,
                         nargs='+', choices=["model", "profile", "check"],
                         help="Select the operations : model and/or profile "
-                        "and/or structure checking (default : both modeling "
-                        "and profile are done)")
+                        "and/or structure checking (default : model, profile, "
+                        "and check are done)")
     parser.add_argument('-f', '--multifasta_file', type=isfile,
                         help='Multifasta file with model and '
                              'template sequences.')
@@ -239,14 +249,28 @@ def get_arguments():
                                  "t_coffee"],
                         help="Indicates the software that should be used to "
                         "align sequences (Default = clustalo).")
+    parser.add_argument('-g', '--path_alignment', type=isdir, default=None,
+                        help='Path to the alignment software.')
     parser.add_argument('-p', '--pdb', type=str, nargs='+',
                         help="List of pdb files or codes to use as template.")
+    parser.add_argument('-pi', '--pdb_identification', type=str, nargs='+',
+                        choices=["hhsearch", "psiblast", "jackhmmer"],
+                        default=None,
+                        help="Indicate the software to search homologous.")
+    parser.add_argument('-pd', '--pdb_identification_database', type=isfile,
+                        nargs='+', default=None,
+                        help="Indicate database support for that research.")
+    parser.add_argument('-pp', '--pdb_identification_path', type=isdir,
+                        nargs='+',
+                        help="Path to the software for identification.")
+    parser.add_argument('-ps', '--pdb_identification_strategy', type=str,
+                        default="best", choices=["best"],  # , "covering", "multiple"
+                        help="Select the strategy  to the software for "
+                        "identification.")
     parser.add_argument('-e', '--model_name', type=str,
                         help='Code of the sequence to modelize (required if '
                         'several sequence with no structure associated are '
                         'present in the multifasta).')
-    parser.add_argument('-g', '--path_alignment', type=isdir, default=None,
-                        help='Path to the alignment software.')
     parser.add_argument('-n', '--number_model', type=int, default=8,
                         help='Number of model to produce (default = 8).')
     parser.add_argument('-q', '--model_quality', type=str, default="fast",
@@ -260,10 +284,10 @@ def get_arguments():
                         type=str, nargs='+',
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
-                        "software.")
-    parser.add_argument('-j', '--path_psipred', type=isdir,
+                        "software (choose model + templates).")
+    parser.add_argument('-j', '--path_psipred', type=isdir, default=None,
                         help='Path to Psipred software.')
-    parser.add_argument('-d', '--psipred', type=isfile,
+    parser.add_argument('-d', '--psipred', type=isfile, default=None,
                         help='Psipred file used for modeling and checking the '
                         'model structures (*.psipass2).')
     parser.add_argument('-b', '--limit_confidence', type=islimit, default=7,
@@ -291,16 +315,74 @@ def get_arguments():
     parser.add_argument('-da', '--disable_autocorrect', action='store_true',
                         default=False,
                         help='Disable the autocorrect of the multifasta file.')
-    parser.add_argument('-m', '--list_atom', type=isfile,
+    parser.add_argument('-m', '--list_atom', type=isfile, default=None,
                         help='List of interest atom')
     parser.add_argument('-md', '--default_distances', type=isfile,
-                        help='PDB file')
+                        default=None, help='Distance file')
     parser.add_argument('-t', '--thread', default=mp.cpu_count(), type=int,
                         help='Number of thread (Default = all cpus available '
                         'will be used).')
-    parser.add_argument('-c', '--config', type=isfile,
+    parser.add_argument('-c', '--config', type=isfile, default=None,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
+
+
+def extract_elements(template_search_file, regex_text, order):
+    """
+    """
+    elements = []
+    regex = re.compile(regex_text)
+    nb_elements = 0
+    try:
+        with open(template_search_file, "rt") as template_search:
+            for line in template_search:
+                match = regex.match(line)
+                if match:
+                    # Get name e-value, identity and recovery
+                    elements += [[match.group(order[0]),
+                                  match.group(order[1])]]
+                    nb_elements += 1
+                # Consider only the 10 best templates
+                if nb_elements > 10:
+                    break
+    except IOError:
+        sys.exit("Error cannot open {0}".format(template_search_file))
+    return elements
+
+
+def identify_template(conf_data, multifasta_file, thread, pdb_identification,
+                      pdb_identification_database, pdb_identification_path,
+                      strategy, results):
+    """
+    """
+    PDB = []
+    if(len(pdb_identification_path) == len(pdb_identification)):
+        list_path = pdb_identification_path
+    else:
+        list_path = [""] * len(pdb_identification)
+    if(len(pdb_identification_database) != len(pdb_identification)):
+        sys.exit("Please specify explicitly for each software a database "
+                 "to explore")
+    for i in xrange(len(pdb_identification)):
+        output = results + pdb_identification[i] + "_output.txt"
+        run_command(replace_motif(conf_data.hdict[pdb_identification[i]],
+                                  list_path[i], multifasta_file,
+                                  "", output, thread, "", "",
+                                  pdb_identification_database[i]))
+        # Get elements
+        if(pdb_identification[i] == "hhsearch"):
+            elements = extract_elements(output, "[0-9]+\s+\w+\_[A-Z].+"
+                                        "\(([0-9]+)\)", [1, 2])
+        elif(pdb_identification[i] == "psiblast"):
+            elements = extract_elements(output, "\w+\s.+\|(\w+)\|[A-Z]\s+"
+                                        "[0-9]+\s+([0-9]+)", [1, 2])
+        elif(pdb_identification[i] == "hmmsearch"):
+            elements = extract_elements(output, "\+\s+(\S+).+\|(\w+)\|[A-Z]",
+                                        [2, 1])
+        # Select PDB
+        if strategy == "best":
+            PDB += [elements[0]]
+    return get_unique(PDB)
 
 
 def download_pdb(conf_data, pdb, results):
@@ -365,7 +447,7 @@ def run_command(cmd):
 
 
 def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
-                  output, thread, psipred, fasta):
+                  output, thread, psipred, fasta, database):
     """Set the software command
      :Parameters:
          build_command: Command
@@ -396,6 +478,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
     build_command = build_command.replace('%output', output)
     build_command = build_command.replace('%psipred', psipred)
     build_command = build_command.replace('%fasta', fasta)
+    build_command = build_command.replace('%database', database)
     print(build_command, file=sys.stderr)
     return build_command
 
@@ -569,25 +652,25 @@ def get_fasta_data(aln_fasta_file):
     return data_fasta
 
 
-def get_start_position(pdb_file):
-    """
-    """
-    pdb_start_posit = 0
-    try:
-        with open(pdb_file, "rt") as pdb:
-            for line in pdb:
-                resnum = line[22:26]
-                field = line[0:4]
-                if(field == "ATOM"):
-                    pdb_start_posit = int(resnum)
-                    break
-    except IOError:
-        sys.exit("Error cannot open {0}".format(pdb_file))
-    except ValueError:
-        sys.exit("Error cannot identify the first residue number"
-                 " in \"{0}\"".format(pdb))
-    assert(pdb_start_posit != 0)
-    return pdb_start_posit
+# def get_start_position(pdb_file):
+#     """
+#     """
+#     pdb_start_posit = 0
+#     try:
+#         with open(pdb_file, "rt") as pdb:
+#             for line in pdb:
+#                 resnum = line[22:26]
+#                 field = line[0:4]
+#                 if(field == "ATOM"):
+#                     pdb_start_posit = int(resnum)
+#                     break
+#     except IOError:
+#         sys.exit("Error cannot open {0}".format(pdb_file))
+#     except ValueError:
+#         sys.exit("Error cannot identify the first residue number"
+#                  " in \"{0}\"".format(pdb))
+#     assert(pdb_start_posit != 0)
+#     return pdb_start_posit
 
 
 def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
@@ -607,7 +690,7 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
     try:
         with open(aln_pir_file, "wt") as aln_pir:
             for element in data_fasta:
-                pdb_start_posit = 1
+#                 pdb_start_posit = 1
                 aln_pir.write(">P1;{0}{1}".format(element, os.linesep))
                 type_data = "sequence"
                 # Identify sequences with a pdb structure associated
@@ -615,7 +698,7 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                     type_data = "structureX"
                     pdb_index = pdb_codes.index(element)
                     # Identify start postion
-                    pdb_start_posit = get_start_position(pdb_files[pdb_index])
+#                     pdb_start_posit = get_start_position(pdb_files[pdb_index])
                 # Check if we have to add heteroatom in the alignment for the
                 # current PDB
                 if (element not in heteroatom_models and
@@ -799,13 +882,13 @@ def run_alignment(conf_data, multifasta_file, pdb_codes, pdb_files,
     if alignment_software in ("t_coffee", "clustalw2"):
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_pir_file, thread, "", ""))
+                                  aln_pir_file, thread, "", "", ""))
     else:
         aln_fasta_file = (results + alignment_software + "_"
                           + str(os.getpid()) + "_aln.fasta")
         run_command(replace_motif(conf_data.hdict[alignment_software],
                                   path_soft, multifasta_file, pdb_files,
-                                  aln_fasta_file, thread, "", ""))
+                                  aln_fasta_file, thread, "", "", ""))
         data_fasta = get_fasta_data(aln_fasta_file)
         write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                        add_heteroatom, heteroatom_models)
@@ -903,7 +986,7 @@ def run_secondary_structure_pred(conf_data, multifasta_file, model,
     multifasta_data = get_multifasta_data(multifasta_file)
     fasta_file = write_extract_fasta(multifasta_data, model)
     run_command(replace_motif(conf_data.hdict['psipred'], path_psipred, "", "",
-                              "", "", "", fasta_file))
+                              "", "", "", fasta_file, ""))
     return fasta_file.replace(".fasta", ".horiz")
 
 
@@ -1626,8 +1709,8 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
         if('procheck' in structure_check):
             print("Run procheck for " + pdb[0])
             run_command(replace_motif(conf_data.hdict['procheck'],
-                                      path_check, "",
-                                      [pdb[0]], "", "", "", ""))
+                                      path_check, "", [pdb[0]], "", "", "",
+                                      "", ""))
         if('proq' in structure_check and REQUESTS):
             print("Run ProQ for " + pdb[0])
             status = True
@@ -1666,7 +1749,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
 
 
 def write_checking(data, title, filename):
-    """
+    """Write checking value
     """
     try:
         with open(filename, "wt") as output:
@@ -1679,7 +1762,7 @@ def write_checking(data, title, filename):
 
 def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
                           sessionid, ylabel, type_data):
-    """
+    """Plot verify3D profile for several PDB
     """
     pdb_files = []
     num_struct = 0
@@ -1804,7 +1887,7 @@ def get_distances(pdb_atom_list):
 
 
 def write_distances(results, pdb_file, pdb_distances_list):
-    """
+    """Write ATOM distances
     """
     distances_out_file = (results +
                           ".".join(os.path.basename(pdb_file).split(".")[:-1])
@@ -1884,14 +1967,23 @@ def main():
     # Load parameters
     args, parser = get_arguments()
     if (("profile" in args.list_operations
-        or "model" in args.list_operations) and not args.pdb):
+        or "model" in args.list_operations) and not args.pdb
+        and not args.pdb_identification):
         print("You must provide at least one structure template "
               "for modeling and/or profiling", file=sys.stderr)
         sys.exit(parser.print_help())
     # Configure option
     conf_data = ModelingConfig(args.config, args.results)
+    # Identify templates
+    if(args.pdb_identification):
+        args.pdb = identify_template(conf_data, args.multifasta_file,
+                                     args.thread, args.pdb_identification,
+                                     args.pdb_identification_database,
+                                     args.pdb_identification_path,
+                                     args.pdb_identification_strategy)
     # Prepare modeling
-    if ("profile" in args.list_operations or "model" in args.list_operations):
+    if ("profile" in args.list_operations or "model" in args.list_operations
+        and args.pdb):
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
