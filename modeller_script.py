@@ -274,7 +274,7 @@ def get_arguments():
                         'present in the multifasta).')
     parser.add_argument('-n', dest='--number_model', type=int, default=8,
                         help='Number of model to produce (default = 8).')
-    parser.add_argument('-q', '--model_quality', type=str, default="fast",
+    parser.add_argument('-q', dest='--model_quality', type=str, default="fast",
                         choices=["very_fast", "fast", "normal", "max"],
                         help='Adjust the quality of the modeling (default = '
                         'fast).')
