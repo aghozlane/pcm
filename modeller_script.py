@@ -139,9 +139,9 @@ class ModelingConfig:
                         "-i %multifasta  -d %database -cpu %proc -o %output")
         self.config.set("PDB_config", "psiblast", "%path_softpsiblast "
                         "-query %multifasta -db %database -out %output "
-                        "-evalue 0.001 -outfmt 6 -num_threads %thread")
+                        "-evalue 0.001 -outfmt 6 -num_threads %proc")
         self.config.set("PDB_config", "jackhmmer", "%path_softjackhmmer "
-                        "--cpu %thread  -o %output %multifasta %database")
+                        "--cpu %proc  -o %output %multifasta %database")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_softclustalo -i %multifasta -o %output "
