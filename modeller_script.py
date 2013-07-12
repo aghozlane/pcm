@@ -258,11 +258,11 @@ def get_arguments():
                         choices=["hhsearch", "psiblast", "jackhmmer"],
                         help="Indicate the software to search homologous.")
     parser.add_argument('-pd', dest='pdb_identification_database',
-                        type=isfile, nargs='+', default=None,
+                        type=isfile, nargs='+', default=[],
                         help="Indicate the support database for template "
                         "research.")
     parser.add_argument('-pp', dest='pdb_identification_path', type=isdir,
-                        nargs='+', help="Path to the software for "
+                        nargs='+', default=[], help="Path to the software for "
                         "identification.")
     parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
                         default="best", choices=["best"],  # , "covering", "multiple"
