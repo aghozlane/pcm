@@ -341,13 +341,16 @@ def extract_elements(template_search_file, regex_text, order):
                 if match:
                     # Get name e-value, identity and recovery
                     elements += [[match.group(order[0]),
-                                  match.group(order[1])]]
+                                  int(match.group(order[1]))]]
                     nb_elements += 1
                 # Consider only the 10 best templates
                 if nb_elements > 10:
                     break
     except IOError:
         sys.exit("Error cannot open {0}".format(template_search_file))
+    except ValueError:
+        sys.exit("Error cannot convert to interger "
+                 "{0}".format(match.group(order[1])))
     return elements
 
 
@@ -383,7 +386,12 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         # Select PDB
         if strategy == "best":
             PDB += [elements[0]]
-    return get_unique(PDB)
+    nb_pdb = len(PDB)
+    if nb_pdb > 1:
+        PDB = get_unique_no_order(PDB)
+    elif nb_pdb == 0:
+        sys.exit("No template structure found !!")
+    return PDB
 
 
 def download_pdb(conf_data, pdb, results):
@@ -653,27 +661,6 @@ def get_fasta_data(aln_fasta_file):
     return data_fasta
 
 
-# def get_start_position(pdb_file):
-#     """
-#     """
-#     pdb_start_posit = 0
-#     try:
-#         with open(pdb_file, "rt") as pdb:
-#             for line in pdb:
-#                 resnum = line[22:26]
-#                 field = line[0:4]
-#                 if(field == "ATOM"):
-#                     pdb_start_posit = int(resnum)
-#                     break
-#     except IOError:
-#         sys.exit("Error cannot open {0}".format(pdb_file))
-#     except ValueError:
-#         sys.exit("Error cannot identify the first residue number"
-#                  " in \"{0}\"".format(pdb))
-#     assert(pdb_start_posit != 0)
-#     return pdb_start_posit
-
-
 def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                    add_heteroatom, heteroatom_models):
     """Write new pir alignment
@@ -697,9 +684,6 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
                 # Identify sequences with a pdb structure associated
                 if element in pdb_codes:
                     type_data = "structureX"
-                    pdb_index = pdb_codes.index(element)
-                    # Identify start postion
-#                     pdb_start_posit = get_start_position(pdb_files[pdb_index])
                 # Check if we have to add heteroatom in the alignment for the
                 # current PDB
                 if (element not in heteroatom_models and
@@ -722,8 +706,8 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
     except IOError:
         sys.exit("Error cannot open {0}".format(aln_pir_file))
     except AssertionError:
-        sys.exit("Error cannot find start residue position "
-                 "in the pdb : {0}".format(pdb_files[pdb_index]))
+        sys.exit("Error cannot find start residue position in"
+                 " the pdb : {0}".format(pdb_files[pdb_codes.index(element)]))
 
 
 def get_multifasta_data(multifasta_file):
@@ -1436,6 +1420,15 @@ def get_unique(seq):
     """
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
+
+
+def get_unique_no_order(seq):
+    """Get unique elements with no order preserving
+     :Parameters:
+           seq: List of elements
+    """
+    # Not order preserving
+    return {}.fromkeys(seq).keys()
 
 
 def get_sequence(pdb_file):
