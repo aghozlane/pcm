@@ -375,7 +375,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                                   pdb_identification_database[i]))
         # Get elements
         if(pdb_identification[i] == "hhsearch"):
-            elements = extract_elements(output, "[0-9]+\s+(\w+)\_[A-Z].+"
+            elements = extract_elements(output, "\s*[0-9]+\s+(\w+)\_[A-Z].+"
                                         "\(([0-9]+)\)", [1, 2])
         elif(pdb_identification[i] == "psiblast"):
             elements = extract_elements(output, "\w+\s.+\|(\w+)\|[A-Z]\s+"
@@ -385,7 +385,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                                         [2, 1])
         # Select PDB
         if strategy == "best":
-            PDB += [elements[0]]
+            PDB += [elements[0][0]]
     nb_pdb = len(PDB)
     if nb_pdb > 1:
         PDB = get_unique_no_order(PDB)
