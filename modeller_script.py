@@ -346,11 +346,15 @@ def extract_elements(template_search_file, regex_text, order):
                 # Consider only the 10 best templates
                 if nb_elements > 10:
                     break
+        assert(len(elements) > 0)
     except IOError:
         sys.exit("Error cannot open {0}".format(template_search_file))
     except ValueError:
         sys.exit("Error cannot convert to interger "
                  "{0}".format(match.group(order[1])))
+    except AssertionError:
+        sys.exit("No template have been identified in "
+                 "{0}".format(template_search_file))
     return elements
 
 
@@ -378,7 +382,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
             elements = extract_elements(output, "\s*[0-9]+\s+(\w+)\_[A-Z].+"
                                         "\(([0-9]+)\)", [1, 2])
         elif(pdb_identification[i] == "psiblast"):
-            elements = extract_elements(output, "\w+\s.+\|(\w+)\|[A-Z]\s+"
+            elements = extract_elements(output, "\w+\s+.+\|(\w+)\|[A-Z]\s+"
                                         "[0-9]+\s+([0-9]+)", [1, 2])
         elif(pdb_identification[i] == "hmmsearch"):
             elements = extract_elements(output, "\+\s+(\S+).+\|(\w+)\|[A-Z]",
