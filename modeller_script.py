@@ -373,10 +373,10 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         # Get elements
         if(pdb_identification[i] == "hhsearch"):
             elements = extract_elements(output, "[0-9]+\s+\w+\_[A-Z].+"
-                                        "\(([0-9]+)\)", [1, 2])
+                                        + "\(([0-9]+)\)", [1, 2])
         elif(pdb_identification[i] == "psiblast"):
             elements = extract_elements(output, "\w+\s.+\|(\w+)\|[A-Z]\s+"
-                                        "[0-9]+\s+([0-9]+)", [1, 2])
+                                        + "[0-9]+\s+([0-9]+)", [1, 2])
         elif(pdb_identification[i] == "hmmsearch"):
             elements = extract_elements(output, "\+\s+(\S+).+\|(\w+)\|[A-Z]",
                                         [2, 1])
