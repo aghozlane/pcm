@@ -232,98 +232,98 @@ def get_arguments():
     # Parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h".format(sys.argv[0]))
-    parser.add_argument("-l", dest="--list_operations",
+    parser.add_argument("-l", dest="list_operations",
                         default=["model", "profile", "check"], type=str,
                         nargs='+', choices=["model", "profile", "check"],
                         help="Select the operations : model and/or profile "
                         "and/or structure checking (default : model, profile, "
                         "and check are done)")
-    parser.add_argument('-f', dest='--multifasta_file', type=isfile,
+    parser.add_argument('-f', dest='multifasta_file', type=isfile,
                         help='Multifasta file with model and '
                              'template sequences.')
-    parser.add_argument('-i', dest='--alignment_file', type=isfile,
+    parser.add_argument('-i', dest='alignment_file', type=isfile,
                         help='Alignment file in PIR format.')
-    parser.add_argument('-a', dest='--alignment_software', type=str,
+    parser.add_argument('-a', dest='alignment_software', type=str,
                         default="clustalo",
                         choices=["clustalw2", "clustalo", "mafft", "muscle",
                                  "t_coffee"],
                         help="Indicates the software that should be used to "
                         "align sequences (Default = clustalo).")
-    parser.add_argument('-g', dest='--path_alignment', type=isdir, default=None,
+    parser.add_argument('-g', dest='path_alignment', type=isdir, default=None,
                         help='Path to the alignment software.')
-    parser.add_argument('-p', dest='--pdb', type=str, nargs='+',
+    parser.add_argument('-p', dest='pdb', type=str, nargs='+',
                         help="List of pdb files or codes to use as template.")
-    parser.add_argument('-pi', dest='--pdb_identification', type=str,
+    parser.add_argument('-pi', dest='pdb_identification', type=str,
                         nargs='+', default=None,
                         choices=["hhsearch", "psiblast", "jackhmmer"],
                         help="Indicate the software to search homologous.")
-    parser.add_argument('-pd', dest='--pdb_identification_database',
+    parser.add_argument('-pd', dest='pdb_identification_database',
                         type=isfile, nargs='+', default=None,
                         help="Indicate the support database for template "
                         "research.")
-    parser.add_argument('-pp', dest='--pdb_identification_path', type=isdir,
+    parser.add_argument('-pp', dest='pdb_identification_path', type=isdir,
                         nargs='+', help="Path to the software for "
                         "identification.")
-    parser.add_argument('-ps', dest='--pdb_identification_strategy', type=str,
+    parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
                         default="best", choices=["best"],  # , "covering", "multiple"
                         help="Select the strategy  to the software for "
                         "identification.")
-    parser.add_argument('-e', dest='--model_name', type=str,
+    parser.add_argument('-e', dest='model_name', type=str,
                         help='Code of the sequence to modelize (required if '
                         'several sequence with no structure associated are '
                         'present in the multifasta).')
-    parser.add_argument('-n', dest='--number_model', type=int, default=8,
+    parser.add_argument('-n', dest='number_model', type=int, default=8,
                         help='Number of model to produce (default = 8).')
-    parser.add_argument('-q', dest='--model_quality', type=str, default="fast",
+    parser.add_argument('-q', dest='model_quality', type=str, default="fast",
                         choices=["very_fast", "fast", "normal", "max"],
                         help='Adjust the quality of the modeling (default = '
                         'fast).')
-    parser.add_argument('-ht', dest='--add_heteroatom', type=int, default=0,
+    parser.add_argument('-ht', dest='add_heteroatom', type=int, default=0,
                         help="Indicates the number of hetero-atom residue(s) "
                         "that should be added to the alignment software.")
-    parser.add_argument('-hm', dest='--heteroatom_models', default=[],
+    parser.add_argument('-hm', dest='heteroatom_models', default=[],
                         type=str, nargs='+',
                         help="Indicate the models for which hetero-atom "
                         "residue(s) should be added to the alignment "
                         "software (choose model + templates).")
-    parser.add_argument('-j', dest='--path_psipred', type=isdir, default=None,
+    parser.add_argument('-j', dest='path_psipred', type=isdir, default=None,
                         help='Path to Psipred software.')
-    parser.add_argument('-d', dest='--psipred', type=isfile, default=None,
+    parser.add_argument('-d', dest='psipred', type=isfile, default=None,
                         help='Psipred file used for modeling and checking the '
                         'model structures (*.psipass2).')
-    parser.add_argument('-b', dest='--limit_confidence', type=islimit,
+    parser.add_argument('-b', dest='limit_confidence', type=islimit,
                         default=7, help='Confidence limit for psipred'
                         '(0-9 - default = >7).')
-    parser.add_argument('-s', dest='--structure_check', type=str, nargs='+',
+    parser.add_argument('-s', dest='structure_check', type=str, nargs='+',
                         choices=["procheck", "proq", "prosa", "verify3D"],
                         default=["procheck", "proq", "prosa", "verify3D"],
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results).')
-    parser.add_argument('-k', dest='--path_check', type=isdir, default=None,
+    parser.add_argument('-k', dest='path_check', type=isdir, default=None,
                         help='Indicate the path to procheck software.')
-    parser.add_argument('-sb', dest='--number_best', type=int, default=5,
+    parser.add_argument('-sb', dest='number_best', type=int, default=5,
                         help='Select number of models for verification'
                         '(from the best model according to dope score - '
                         'default = 5).')
-    parser.add_argument('-sm', dest='--modeller_summary', type=isfile,
+    parser.add_argument('-sm', dest='modeller_summary', type=isfile,
                         default=None, help="Indicate modeller script file "
                         "(instead of alignment file) for checking.")
-    parser.add_argument('-r', dest='--results', type=isdir, default=local_path,
+    parser.add_argument('-r', dest='results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
                         'directory is preferred because of modeller '
                         'function).')
-    parser.add_argument('-da', dest='--disable_autocorrect',
+    parser.add_argument('-da', dest='disable_autocorrect',
                         action='store_true', default=False,
                         help='Disable the autocorrect of the multifasta file.')
-    parser.add_argument('-m', dest='--list_atom', type=isfile, default=None,
+    parser.add_argument('-m', dest='list_atom', type=isfile, default=None,
                         help='List of interest atom')
-    parser.add_argument('-md', dest='--default_distances', type=isfile,
+    parser.add_argument('-md', dest='default_distances', type=isfile,
                         default=None, help='Distance file')
-    parser.add_argument('-t', dest='--thread', default=mp.cpu_count(),
+    parser.add_argument('-t', dest='thread', default=mp.cpu_count(),
                         type=int, help="Number of thread (Default = all cpus "
                         "available will be used).")
-    parser.add_argument('-c', dest='--config', type=isfile, default=None,
+    parser.add_argument('-c', dest='config', type=isfile, default=None,
                         help='Path to configuration file.')
     return parser.parse_args(), parser
 
