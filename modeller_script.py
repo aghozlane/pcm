@@ -309,7 +309,7 @@ def get_arguments():
     parser.add_argument('-sm', dest='--modeller_summary', type=isfile,
                         default=None, help="Indicate modeller script file "
                         "(instead of alignment file) for checking.")
-    parser.add_argument('-r', '--results', type=isdir, default=local_path,
+    parser.add_argument('-r', dest='--results', type=isdir, default=local_path,
                         help='Path to result directory. (Default = current '
                         'directory is preferred because of modeller '
                         'function).')
