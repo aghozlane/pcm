@@ -339,9 +339,11 @@ def extract_elements(template_search_file, regex_text, order):
             for line in template_search:
                 match = regex.match(line)
                 if match:
-                    # Get name e-value, identity and recovery
+                    # Get name and e-value
                     elements += [[match.group(order[0]),
-                                  int(match.group(order[1]))]]
+                                  float(match.group(order[1]))]]
+                    # recover
+                    # int(match.group(order[2]))
                     nb_elements += 1
                 # Consider only the 10 best templates
                 if nb_elements > 10:
@@ -364,6 +366,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
     """
     """
     PDB = []
+    elements = []
     if(len(pdb_identification_path) == len(pdb_identification)):
         list_path = pdb_identification_path
     else:
@@ -380,15 +383,18 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         # Get elements
         if(pdb_identification[i] == "hhsearch"):
             elements = extract_elements(output, "\s*[0-9]+\s+(\w+)\_[A-Z].+"
-                                        "\(([0-9]+)\)", [1, 2])
+                                        ".+\s+[0-9\.]+\s+(\S+)",
+                                        [1, 2])
+            # "\(([0-9]+)\)"
         elif(pdb_identification[i] == "psiblast"):
             elements = extract_elements(output, "\w+\s+.+\|(\w+)\|[A-Z]\s+"
-                                        "[0-9.]+\s+([0-9]+)", [1, 2])
-        elif(pdb_identification[i] == "hmmsearch"):
-            elements = extract_elements(output, "\+\s+(\S+).+\|(\w+)\|[A-Z]",
+                                        "(\S+)+\s+[0-9]+", [1, 2])
+        elif(pdb_identification[i] == "jackhmmer"):
+            elements = extract_elements(output,
+                                        "^\+\s+(\S+)\s+.+\|(\w+)\|[A-Z]",
                                         [2, 1])
         # Select PDB
-        if strategy == "best":
+        if strategy == "best" and len(elements) > 0:
             PDB += [elements[0][0]]
     nb_pdb = len(PDB)
     if nb_pdb > 1:
