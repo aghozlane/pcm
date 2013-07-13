@@ -376,7 +376,8 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                  "to explore")
     for i in xrange(len(pdb_identification)):
         output = (results + pdb_identification[i] + "_"
-                  + os.path.basename(multifasta_file) + "_output.txt")
+                  + ".".join(os.path.basename(multifasta_file).split(".")[:-1])
+                  + "_output.txt")
         run_command(replace_motif(conf_data.hdict[pdb_identification[i]],
                                   list_path[i], multifasta_file,
                                   "", output, thread, "", "",
