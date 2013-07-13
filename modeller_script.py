@@ -375,7 +375,8 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         sys.exit("Please specify explicitly for each software a database "
                  "to explore")
     for i in xrange(len(pdb_identification)):
-        output = results + pdb_identification[i] + "_output.txt"
+        output = (results + pdb_identification[i] + "_"
+                  + os.path.basename(multifasta_file) + "_output.txt")
         run_command(replace_motif(conf_data.hdict[pdb_identification[i]],
                                   list_path[i], multifasta_file,
                                   "", output, thread, "", "",
