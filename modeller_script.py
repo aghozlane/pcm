@@ -419,8 +419,10 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                                         [1, 2])
             # "\(([0-9]+)\)"
         elif(pdb_identification[i] == "psiblast"):
+            # "\w+\s+.+\|(\w+)\|[A-Z]\s+.+\s+(\S+)"
+            # "\s+[0-9.]+{0}".format(os.linesep)
             elements = extract_elements(output,
-                                        "\w+\s+.+\|(\w+)\|[A-Z]\s+.+\s+(\S+)"
+                                        "\w+\s+(\w+)\s+.+\s+(\S+)"
                                         "\s+[0-9.]+{0}".format(os.linesep),
                                         [1, 2])
         elif(pdb_identification[i] == "jackhmmer"):
