@@ -187,7 +187,10 @@ class FullPaths(argparse.Action):
         if not isinstance(values, basestring):
                 out = []
                 for val in values:
-                        if os.path.isfile(val) or os.path.isdir(val):
+                        if os.path.isfile(val):
+                            out += [os.path.abspath(
+                                            os.path.expanduser(val))]
+                        elif os.path.isdir(val):
                                 out += [os.path.abspath(
                                             os.path.expanduser(val))
                                         + os.sep]
@@ -196,7 +199,10 @@ class FullPaths(argparse.Action):
                 setattr(namespace, self.dest, out)
         # Value is a string
         else:
-            if os.path.isfile(values) or os.path.isdir(values):
+            if os.path.isfile(values):
+                setattr(namespace, self.dest,
+                        os.path.abspath(os.path.expanduser(values)))
+            elif os.path.isdir(values):
                 setattr(namespace, self.dest,
                         os.path.abspath(os.path.expanduser(values)) + os.sep)
 
