@@ -180,6 +180,13 @@ class ModelingConfig:
                      "file {0}".format(self.phyconfig_file))
 
 
+class FullPaths(argparse.Action):
+    """Expand user- and relative-paths"""
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest,
+                os.path.abspath(os.path.expanduser(values)))
+
+
 def isfile(path):
     """Check if path is an existing file.
       :Parameters:
@@ -238,9 +245,11 @@ def get_arguments():
                         "and/or structure checking (default : model, profile, "
                         "and check are done)")
     parser.add_argument('-f', dest='multifasta_file', type=isfile,
+                        action=FullPaths,
                         help='Multifasta file with model and '
                              'template sequences.')
     parser.add_argument('-i', dest='alignment_file', type=isfile,
+                        action=FullPaths,
                         help='Alignment file in PIR format.')
     parser.add_argument('-a', dest='alignment_software', type=str,
                         default="clustalo",
@@ -249,6 +258,7 @@ def get_arguments():
                         help="Indicates the software that should be used to "
                         "align sequences (Default = clustalo).")
     parser.add_argument('-g', dest='path_alignment', type=isdir, default=None,
+                        action=FullPaths,
                         help='Path to the alignment software.')
     parser.add_argument('-p', dest='pdb', type=str, nargs='+',
                         help="List of pdb files or codes to use as template.")
@@ -257,10 +267,11 @@ def get_arguments():
                         choices=["hhsearch", "psiblast", "jackhmmer"],
                         help="Indicate the software to search homologous.")
     parser.add_argument('-pd', dest='pdb_identification_database',
-                        type=isfile, nargs='+', default=[],
+                        type=isfile, nargs='+', default=[], action=FullPaths,
                         help="Indicate the support database for template "
                         "research.")
     parser.add_argument('-pp', dest='pdb_identification_path', type=isdir,
+                        action=FullPaths,
                         nargs='+', default=[], help="Path to the software for "
                         "identification.")
     parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
@@ -286,8 +297,9 @@ def get_arguments():
                         "residue(s) should be added to the alignment "
                         "software (choose model + templates).")
     parser.add_argument('-j', dest='path_psipred', type=isdir, default=None,
-                        help='Path to Psipred software.')
+                        action=FullPaths, help='Path to Psipred software.')
     parser.add_argument('-d', dest='psipred', type=isfile, default=None,
+                        action=FullPaths,
                         help='Psipred file used for modeling and checking the '
                         'model structures (*.psipass2).')
     parser.add_argument('-b', dest='limit_confidence', type=islimit,
@@ -300,12 +312,14 @@ def get_arguments():
                         '(ProQ significance is enhanced with psipred '
                         'results).')
     parser.add_argument('-k', dest='path_check', type=isdir, default=None,
+                        action=FullPaths,
                         help='Indicate the path to procheck software.')
     parser.add_argument('-sb', dest='number_best', type=int, default=5,
                         help='Select number of models for verification'
                         '(from the best model according to dope score - '
                         'default = 5).')
     parser.add_argument('-sm', dest='modeller_summary', type=isfile,
+                        action=FullPaths,
                         default=None, help="Indicate modeller script file "
                         "(instead of alignment file) for checking.")
     parser.add_argument('-r', dest='results', type=isdir,
@@ -317,14 +331,16 @@ def get_arguments():
                         action='store_true', default=False,
                         help='Disable the autocorrect of the multifasta file.')
     parser.add_argument('-m', dest='list_atom', type=isfile, default=None,
+                        action=FullPaths,
                         help='List of interest atom')
     parser.add_argument('-md', dest='default_distances', type=isfile,
+                        action=FullPaths,
                         default=None, help='Distance file')
     parser.add_argument('-t', dest='thread', default=mp.cpu_count(),
                         type=int, help="Number of thread (Default = all cpus "
                         "available will be used).")
     parser.add_argument('-c', dest='config', type=isfile, default=None,
-                        help='Path to configuration file.')
+                        action=FullPaths, help='Path to configuration file.')
     return parser.parse_args(), parser
 
 
