@@ -228,7 +228,6 @@ def get_arguments():
     """Retrieves the arguments of the program.
       Returns: An object that contains the arguments
     """
-    local_path = ".{0}".format(os.sep)
     # Parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h".format(sys.argv[0]))
@@ -309,7 +308,8 @@ def get_arguments():
     parser.add_argument('-sm', dest='modeller_summary', type=isfile,
                         default=None, help="Indicate modeller script file "
                         "(instead of alignment file) for checking.")
-    parser.add_argument('-r', dest='results', type=isdir, default=local_path,
+    parser.add_argument('-r', dest='results', type=isdir,
+                        default=os.curdir + os.sep,
                         help='Path to result directory. (Default = current '
                         'directory is preferred because of modeller '
                         'function).')
@@ -1975,6 +1975,10 @@ def main():
                "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"}
     # Load parameters
     args, parser = get_arguments()
+    # Move to new path in order to save data
+    if args.results != os.curdir + os.sep:
+        os.chdir(args.results)
+        args.results = os.curdir + os.sep
     if (("profile" in args.list_operations
         or "model" in args.list_operations) and not args.pdb
         and not args.pdb_identification):
