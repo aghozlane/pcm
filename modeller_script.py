@@ -274,6 +274,7 @@ def get_arguments():
                         action=FullPaths,
                         help='Path to the alignment software.')
     parser.add_argument('-p', dest='pdb', type=str, nargs='+',
+                        action=FullPaths,
                         help="List of pdb files or codes to use as template.")
     parser.add_argument('-pi', dest='pdb_identification', type=str,
                         nargs='+', default=None,
@@ -288,7 +289,8 @@ def get_arguments():
                         nargs='+', default=[], help="Path to the software for "
                         "identification.")
     parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
-                        default="best", choices=["best"],  # , "covering", "multiple"
+                        default="best", choices=["best"],
+                        # , "covering", "multiple"
                         help="Select the strategy  to the software for "
                         "identification.")
     parser.add_argument('-e', dest='model_name', type=str,
@@ -422,7 +424,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
             # "\w+\s+.+\|(\w+)\|[A-Z]\s+.+\s+(\S+)"
             # "\s+[0-9.]+{0}".format(os.linesep)
             elements = extract_elements(output,
-                                        "\w+\s+(\w+)\s+.+\s+(\S+)"
+                                        "\S+\s+(\w+)\s+.+\s+(\S+)"
                                         "\s+[0-9.]+{0}".format(os.linesep),
                                         [1, 2])
         elif(pdb_identification[i] == "jackhmmer"):
