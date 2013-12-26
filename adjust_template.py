@@ -18,11 +18,13 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} file.pdb".format(sys.argv[0]))
     parser.set_defaults(activity="renum")
-    parser.add_argument("-a", "--activity", type=str,
+    parser.add_argument("-a", dest="activity", type=str,
                         choices=["renum", "sequence"],
                         help='Select operations.')
-    parser.add_argument('-p', '--pdb', type=str, required=True, nargs='+',
+    parser.add_argument('-p', dest='pdb', type=str, required=True, nargs='+',
                         help="List of pdb files or codes.")
+    parser.add_argument('-s', dest='start_position', type=int, default=1,
+                        help="List of pdb files or codes (default : 1).")
     return parser.parse_args()
 
 
@@ -39,11 +41,11 @@ def get_numstring(val, maxval):
     return(strval)
 
 
-def renum_pdb(pdb_file, activity):
+def renum_pdb(pdb_file, activity, start_position):
     """
     """
     res = 0
-    num = 0
+    num = start_position - 1
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
@@ -57,7 +59,7 @@ def renum_pdb(pdb_file, activity):
                         sys.stdout.write(seqdict[aa])
                 pdb_line = list(line)
                 if(field == "ATOM"):
-                    pdb_line[23:26] = get_numstring(num, 3)
+                    pdb_line[22:26] = get_numstring(num, 4)
                 pdb_line = "".join(pdb_line)
                 if activity == "renum":
                     sys.stdout.write(pdb_line)
@@ -77,7 +79,7 @@ def main():
                 if args.activity == "sequence":
                     print(">{0}"
                     .format(".".join(os.path.basename(pdb).split(".")[:-1])))
-                renum_pdb(pdb, args.activity)
+                renum_pdb(pdb, args.activity, args.start_position)
             else:
                 raise ValueError
     except ValueError:
