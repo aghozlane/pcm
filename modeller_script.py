@@ -189,7 +189,8 @@ class FullPaths(argparse.Action):
                 for val in values:
                         if os.path.isfile(val) or os.path.isdir(val):
                                 out += [os.path.abspath(
-                                            os.path.expanduser(val))]
+                                            os.path.expanduser(val))
+                                        + os.sep]
                         else:
                                 out += [val]
                 setattr(namespace, self.dest, out)
@@ -197,7 +198,7 @@ class FullPaths(argparse.Action):
         else:
             if os.path.isfile(values) or os.path.isdir(values):
                 setattr(namespace, self.dest,
-                        os.path.abspath(os.path.expanduser(values)))
+                        os.path.abspath(os.path.expanduser(values)) + os.sep)
 
 
 def isfile(path):
