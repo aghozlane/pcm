@@ -183,8 +183,21 @@ class ModelingConfig:
 class FullPaths(argparse.Action):
     """Expand user- and relative-paths"""
     def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest,
-                os.path.abspath(os.path.expanduser(values)))
+        # If false then its a list
+        if not isinstance(values, basestring):
+                out = []
+                for val in values:
+                        if os.path.isfile(val) or os.path.isdir(val):
+                                out += [os.path.abspath(
+                                            os.path.expanduser(val))]
+                        else:
+                                out += [val]
+                setattr(namespace, self.dest, out)
+        # Value is a string
+        else:
+            if os.path.isfile(values) or os.path.isdir(values):
+                setattr(namespace, self.dest,
+                        os.path.abspath(os.path.expanduser(values)))
 
 
 def isfile(path):
