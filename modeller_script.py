@@ -283,6 +283,9 @@ def get_arguments():
     parser.add_argument('-p', dest='pdb', type=str, nargs='+',
                         action=FullPaths,
                         help="List of pdb files or codes to use as template.")
+    parser.add_argument('-pr', dest='pdb_repository', type=isdir,
+                        action=FullPaths,
+                        help="Indicate the path to a cleaned pdb directory.")
     parser.add_argument('-pi', dest='pdb_identification', type=str,
                         nargs='+', default=None,
                         choices=["hhsearch", "psiblast", "jackhmmer"],
@@ -472,7 +475,7 @@ def download_pdb(conf_data, pdb, results):
     return outfilename
 
 
-def get_pdb(conf_data, pdb_list, results):
+def get_pdb(conf_data, pdb_list, pdb_respository, results):
     """Check pdb extension
      :Parameters:
         conf_data: Configuration dictionary
@@ -482,11 +485,14 @@ def get_pdb(conf_data, pdb_list, results):
     pdb_codes = []
     pdb_files = []
     for pdb in pdb_list:
-        # Correspond to a PDB file
+        # Download corresponding pdb
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            pdb_files += [download_pdb(conf_data, pdb, results)]
-        # Download corresponding pdb
+            if os.path.isfile(pdb_respository + pdb):
+                pdb_files += [pdb_respository + pdb]
+            else:
+                pdb_files += [download_pdb(conf_data, pdb, results)]
+        # Correspond to a PDB file
         else:
             pdb_codes += [".".join(os.path.basename(pdb).split(".")[:-1])]
             pdb_files += [pdb]
@@ -2049,7 +2055,8 @@ def main():
     # Prepare modeling
     if ("profile" in args.list_operations or "model" in args.list_operations
         and args.pdb):
-        pdb_codes, pdb_files = get_pdb(conf_data, args.pdb, args.results)
+        pdb_codes, pdb_files = get_pdb(conf_data, args.pdb,
+                                       args.pdb_respository, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
         if pdb_codes and pdb_files:
