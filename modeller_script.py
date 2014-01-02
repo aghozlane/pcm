@@ -1239,7 +1239,10 @@ def get_profile(profile_file, seq):
 def compute_profile(data):
     """Compute the profile of each model
     """
-    env = get_environment([data[0]])
+    if data[3]:
+        env = get_environment([data[0]] + data[3])
+    else:
+        env = get_environment([data[0]])
     aln = alignment(env, file=data[2])
     aln_template = aln[os.path.basename(data[0]).split(".")[0]]
     # env and pdbfile
@@ -1274,11 +1277,12 @@ def get_session_id(idfile):
     return session_id
 
 
-def load_profiles(pdb_files, pdb_codes, alignment_file, process, results):
+def load_profiles(pdb_files, pdb_codes, alignment_file, process, results,
+                  templates_files=None):
     """Compute and load the profile of each model
     """
     list_run = [[pdb_files[i], (results + pdb_codes[i] + '.profile'),
-                 alignment_file]
+                 alignment_file, templates_files]
                 for i in xrange(len(pdb_files))]
     pool = mp.Pool(processes=process)
     asyncResult = pool.map_async(compute_profile, list_run)
@@ -2151,7 +2155,8 @@ def main():
                                                     list_model,
                                                     args.alignment_file,
                                                     args.thread,
-                                                    args.results)
+                                                    args.results,
+                                                    pdb_files)
         # Plot DOPE profile
         plot_DOPE_profile(list_template_profile, list_model_profile,
                           list_model_files, sessionid, pdb_codes, args.results)
