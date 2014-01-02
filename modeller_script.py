@@ -475,7 +475,7 @@ def download_pdb(conf_data, pdb, results):
     return outfilename
 
 
-def get_pdb(conf_data, pdb_list, pdb_respository, results):
+def get_pdb(conf_data, pdb_list, pdb_repository, results):
     """Check pdb extension
      :Parameters:
         conf_data: Configuration dictionary
@@ -488,8 +488,10 @@ def get_pdb(conf_data, pdb_list, pdb_respository, results):
         # Download corresponding pdb
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            if os.path.isfile(pdb_respository + pdb) and pdb_respository:
-                pdb_files += [pdb_respository + pdb]
+            # If None, put empty string
+            pdb_repository = lambda pdb_repository: pdb_repository or ""
+            if os.path.isfile(pdb_repository + pdb):
+                pdb_files += [pdb_repository + pdb]
             else:
                 pdb_files += [download_pdb(conf_data, pdb, results)]
         # Correspond to a PDB file
