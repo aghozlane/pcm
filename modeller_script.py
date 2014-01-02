@@ -488,7 +488,7 @@ def get_pdb(conf_data, pdb_list, pdb_respository, results):
         # Download corresponding pdb
         if not pdb.endswith('.pdb') or not os.path.isfile(pdb):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
-            if os.path.isfile(pdb_respository + pdb):
+            if os.path.isfile(pdb_respository + pdb) and pdb_respository:
                 pdb_files += [pdb_respository + pdb]
             else:
                 pdb_files += [download_pdb(conf_data, pdb, results)]
