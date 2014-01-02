@@ -808,7 +808,9 @@ def get_pdb_sequence(pdb_file, seqdict):
                 # same number
                 if newres == res:
                     if aa != aa_prev and aa_prev != "":
-                        aa = aa_prev
+                        print("Warning: the residue {0} has two different "
+                              "amino-acid association : {1} - {2}"
+                              .format(newres, aa, aa_prev), file=sys.stderr)
                     else:
                         aa_prev = aa
                 if newres != res and field == "ATOM":
@@ -2204,12 +2206,12 @@ def main():
             write_checking(data_prosa, ["PDB", "zscore"],
                            args.results + os.sep + "result_prosa_{0}.txt"
                            .format(sessionid))
-        if data_verify3D:
+        if data_verify3D and MATPLOTLIB:
             plot_verify3D_profile(summary_data, data_verify3D,
                                   args.number_best, args.results,
                                   sessionid, "Raw score per-residue",
                                   "raw")
-        if data_verify3D_smooth:
+        if data_verify3D_smooth and MATPLOTLIB:
             plot_verify3D_profile(summary_data, data_verify3D_smooth,
                                   args.number_best, args.results,
                                   sessionid, "Average score per-residue",
