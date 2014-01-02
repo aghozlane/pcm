@@ -283,7 +283,7 @@ def get_arguments():
     parser.add_argument('-p', dest='pdb', type=str, nargs='+',
                         action=FullPaths,
                         help="List of pdb files or codes to use as template.")
-    parser.add_argument('-pr', dest='pdb_repository', type=isdir,
+    parser.add_argument('-pr', dest='pdb_repository', type=isdir, default=None,
                         action=FullPaths,
                         help="Indicate the path to a cleaned pdb directory.")
     parser.add_argument('-pi', dest='pdb_identification', type=str,
@@ -2056,7 +2056,7 @@ def main():
     if ("profile" in args.list_operations or "model" in args.list_operations
         and args.pdb):
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb,
-                                       args.pdb_respository, args.results)
+                                       args.pdb_repository, args.results)
     # Compute alignment
     if args.multifasta_file and not args.alignment_file:
         if pdb_codes and pdb_files:
