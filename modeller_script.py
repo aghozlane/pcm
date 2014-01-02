@@ -796,6 +796,7 @@ def get_pdb_sequence(pdb_file, seqdict):
     """
     pdb_seq = ""
     res = 0
+    aa_prev = ""
     chain = None
     try:
         with open(pdb_file, "rt") as pdb:
@@ -803,6 +804,13 @@ def get_pdb_sequence(pdb_file, seqdict):
                 aa = line[17:20]
                 newres = line[22:26]
                 field = line[0:4]
+                # Check if the same residue with the
+                # same number
+                if newres == res:
+                    if aa != aa_prev and aa_prev != "":
+                        aa = aa_prev
+                    else:
+                        aa_prev = aa
                 if newres != res and field == "ATOM":
                     res = newres
                     newchain = line[21:22]
