@@ -493,6 +493,8 @@ def get_pdb(conf_data, pdb_list, pdb_repository, results):
                 cleaned_pdb = pdb_repository + pdb + ".pdb"
                 if os.path.isfile(cleaned_pdb):
                     pdb_files += [cleaned_pdb]
+                else:
+                    pdb_files += [download_pdb(conf_data, pdb, results)]
             else:
                 pdb_files += [download_pdb(conf_data, pdb, results)]
         # Correspond to a PDB file
