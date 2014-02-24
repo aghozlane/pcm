@@ -143,7 +143,7 @@ class ModelingConfig:
                         "-evalue 0.001 -outfmt 6 -num_threads %proc")
         self.config.set("PDB_config", "blastp", "%path_softblastp "
                         "-query %multifasta -db %database -out %output "
-                        "-evalue 0.001 -outfmt 6 -num_threads %proc")
+                        "-outfmt 6 -num_threads %proc")
         self.config.set("PDB_config", "jackhmmer", "%path_softjackhmmer "
                         "--cpu %proc  -o %output %multifasta %database")
         self.config.add_section('Alignment_config')
