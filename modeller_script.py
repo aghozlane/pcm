@@ -460,8 +460,8 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         # Select PDB
         if (number_best_pdb_identification < 0):
             sys.exit("Error: number_best_pdb_identification should be > 0.")
-        PDB += [elements[i][0] for i in range(0,
-                                              number_best_pdb_identification)]
+        PDB += get_unique([hits[0] for hits in elements])
+        PDB = PDB[0:number_best_pdb_identification]
         # if strategy == "best" and len(elements) > 0:
         #    PDB += [elements[0][0]]
     nb_pdb = len(PDB)
