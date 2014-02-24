@@ -837,7 +837,7 @@ def get_pdb_sequence(pdb_file, seqdict):
                 field = line[0:4]
                 # Check if the same residue with the
                 # same number
-                if newres == res:
+                if newres == res and field == "ATOM":
                     if aa != aa_prev and aa_prev != "":
                         print("Warning: the residue {0} has two different "
                               "amino-acid association : {1} - {2}"
