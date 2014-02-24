@@ -106,6 +106,7 @@ class ModelingConfig:
                                                      'download_url')
         self.hdict["hhsearch"] = self.config.get('PDB_config', 'hhsearch')
         self.hdict["psiblast"] = self.config.get('PDB_config', 'psiblast')
+        self.hdict["blastp"] = self.config.get('PDB_config', 'blastp')
         self.hdict["jackhmmer"] = self.config.get('PDB_config', 'jackhmmer')
         self.hdict["clustalo"] = self.config.get('Alignment_config',
                                                  'clustalo')
@@ -138,6 +139,9 @@ class ModelingConfig:
         self.config.set("PDB_config", "hhsearch", "%path_softhhsearch "
                         "-i %multifasta  -d %database -cpu %proc -o %output")
         self.config.set("PDB_config", "psiblast", "%path_softpsiblast "
+                        "-query %multifasta -db %database -out %output "
+                        "-evalue 0.001 -outfmt 6 -num_threads %proc")
+        self.config.set("PDB_config", "blastp", "%path_softblastp "
                         "-query %multifasta -db %database -out %output "
                         "-evalue 0.001 -outfmt 6 -num_threads %proc")
         self.config.set("PDB_config", "jackhmmer", "%path_softjackhmmer "
@@ -288,7 +292,8 @@ def get_arguments():
                         help="Indicate the path to a cleaned pdb directory.")
     parser.add_argument('-pi', dest='pdb_identification', type=str,
                         nargs='+', default=None,
-                        choices=["hhsearch", "psiblast", "jackhmmer"],
+                        choices=["hhsearch", "psiblast",
+                                 "jackhmmer", "blastp"],
                         help="Indicate the software to search homologous.")
     parser.add_argument('-pd', dest='pdb_identification_database',
                         type=isfile, nargs='+', default=[], action=FullPaths,
@@ -298,11 +303,15 @@ def get_arguments():
                         action=FullPaths,
                         nargs='+', default=[], help="Path to the software for "
                         "identification.")
-    parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
-                        default="best", choices=["best"],
-                        # , "covering", "multiple"
-                        help="Select the strategy  to the software for "
-                        "identification.")
+    parser.add_argument('-nb', dest='number_best_pdb_identification', type=int,
+                        default=1, help="Select the number of template from "
+                        "the pdb_identification_database which will be used "
+                        "for the modelling.")
+#     parser.add_argument('-ps', dest='pdb_identification_strategy', type=str,
+#                         default="best", choices=["best"],
+#                         # , "covering", "multiple"
+#                         help="Select the strategy  to the software for "
+#                         "identification.")
     parser.add_argument('-e', dest='model_name', type=str,
                         help='Code of the sequence to modelize (required if '
                         'several sequence with no structure associated are '
@@ -403,7 +412,7 @@ def extract_elements(template_search_file, regex_text, order):
 
 def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                       pdb_identification_database, pdb_identification_path,
-                      strategy, results):
+                      number_best_pdb_identification, results):
     """
     """
     PDB = []
@@ -437,13 +446,24 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                                         "\S+\s+(\w+)\s+.+\s+(\S+)"
                                         "\s+[0-9.]+{0}".format(os.linesep),
                                         [1, 2])
+        elif(pdb_identification[i] == "blastp"):
+            # "\w+\s+.+\|(\w+)\|[A-Z]\s+.+\s+(\S+)"
+            # "\s+[0-9.]+{0}".format(os.linesep)
+            elements = extract_elements(output,
+                                        "\S+\s+(\w+)\s+.+\s+(\S+)"
+                                        "\s+[0-9.]+{0}".format(os.linesep),
+                                        [1, 2])
         elif(pdb_identification[i] == "jackhmmer"):
             elements = extract_elements(output,
                                         "^\+\s+(\S+)\s+.+\|(\w+)\|[A-Z]",
                                         [2, 1])
         # Select PDB
-        if strategy == "best" and len(elements) > 0:
-            PDB += [elements[0][0]]
+        if (number_best_pdb_identification < 0):
+            sys.exit("Error: number_best_pdb_identification should be > 0.")
+        PDB += [elements[i][0] for i in range(0,
+                                              number_best_pdb_identification)]
+        # if strategy == "best" and len(elements) > 0:
+        #    PDB += [elements[0][0]]
     nb_pdb = len(PDB)
     if nb_pdb > 1:
         PDB = get_unique_no_order(PDB)
@@ -2059,7 +2079,7 @@ def main():
                                      args.thread, args.pdb_identification,
                                      args.pdb_identification_database,
                                      args.pdb_identification_path,
-                                     args.pdb_identification_strategy,
+                                     args.number_best_pdb_identification,
                                      args.results)
     # Prepare modeling
     if ("profile" in args.list_operations or "model" in args.list_operations
