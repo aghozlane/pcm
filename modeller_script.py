@@ -2216,7 +2216,8 @@ def main():
                      args.results + "dope_per_model_{0}.svg".format(sessionid))
         else:
             sys.exit("{0} does not exist".format(summary_file))
-    if args.structure_check and os.path.isfile(summary_file):
+    if(args.structure_check and os.path.isfile(summary_file)
+       and "check" in args.list_operations):
         if not args.psipred and "proq" in args.structure_check:
             print("It is recommanded to provide the secondary structure "
                   "prediction using psipred to use ProQ.")
