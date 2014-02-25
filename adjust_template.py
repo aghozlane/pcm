@@ -46,13 +46,15 @@ def renum_pdb(pdb_file, activity, start_position):
     """
     res = 0
     num = start_position - 1
+    aa_prev = ""
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
                 aa = line[17:20]
                 newres = line[22:26]
                 field = line[0:4]
-                if(newres != res):
+                if(newres != res or aa != aa_prev):
+                    aa_prev = aa
                     res = newres
                     num += 1
                     if activity == "sequence" and field == "ATOM":
