@@ -63,6 +63,12 @@ modeller_script.py   -f sequences.fasta   -p structure1.pdb structure2.pdb -ht 3
 
 - Fourth case: add psipred constraint
 
+1.3. Known features
+==================
+First : The user have to remove ANISOU ATOMs.
+Second : There should not be two residues with the same number (resi 112 in 1E25 pdb)
+
+
 Indices and tables
 ==================
 
