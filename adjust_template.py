@@ -53,11 +53,11 @@ def renum_pdb(pdb_file, activity, start_position):
                 aa = line[17:20]
                 newres = line[22:26]
                 field = line[0:4]
-                if(newres != res or aa != aa_prev):
+                if((newres != res or aa != aa_prev) and field == "ATOM"):
                     aa_prev = aa
                     res = newres
                     num += 1
-                    if activity == "sequence" and field == "ATOM":
+                    if activity == "sequence":
                         sys.stdout.write(seqdict[aa])
                 pdb_line = list(line)
                 if(field == "ATOM"):
