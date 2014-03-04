@@ -163,7 +163,7 @@ class ModelingConfig:
                         "-n_core %proc")
         self.config.add_section('Secondary_structure_config')
         self.config.set('Secondary_structure_config', 'psipred',
-                        "%path_softrunpsipred %fasta ")
+                        "%path_softrunpsipred %fasta")
         # -mode 3dcoffee -template_file %pdb
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
@@ -1637,9 +1637,9 @@ def run_proq(website_path, pred, pdb):
                 req = requests.post(website_path, files=files)
         assert(req.status_code == requests.codes.ok)
     except IOError:
-        sys.exit("Error cannot open {0}".format(pdb_sent))
+        sys.exit("Error cannot open {0}".format(pdb))
     except AssertionError:
-        sys.exit("Something went wrong with {0}".format(0))
+        sys.exit("Something went wrong with {0}".format(pdb))
     try:
         if(req.text):
             maxsub = float(req.text.split("Predicted MaxSub              "
@@ -1649,7 +1649,7 @@ def run_proq(website_path, pred, pdb):
         else:
             sys.exit("No data received from ProQ")
     except ValueError:
-        sys.exit("Something went wrong with {0}".format(0))
+        sys.exit("Something went wrong with {0}".format(pdb))
     return [pdb, maxsub, lgscore]
 
 
@@ -1671,9 +1671,9 @@ def run_prosa(website_path, pdb, results):
                                 data=payload)
         assert(req.status_code == requests.codes.ok)
     except IOError:
-        sys.exit("Error cannot open {0}".format(pdb_sent))
+        sys.exit("Error cannot open {0}".format(pdb))
     except AssertionError:
-        sys.exit("Something went wrong with {0}".format(0))
+        sys.exit("Something went wrong with {0}".format(pdb))
     try:
         if (req.text):
             zscore = float(req.text.split("<span class='zscore'>")[1]
@@ -1685,7 +1685,7 @@ def run_prosa(website_path, pdb, results):
         else:
             sys.exit("No data received from verify3D")
     except ValueError:
-        sys.exit("Something went wrong with {0}".format(0))
+        sys.exit("Something went wrong with {0}".format(pdb))
     # Download profile picture
     if(path_hrplot):
         save_picture(website_path + "upload/" + path_hrplot,
@@ -1742,9 +1742,9 @@ def run_verify3D(website_path, pdb, results):
                                 headers=headers)
         assert(req.status_code == requests.codes.ok)
     except IOError:
-        sys.exit("Error cannot open {0}".format(pdb_sent))
+        sys.exit("Error cannot open {0}".format(pdb))
     except AssertionError:
-        sys.exit("Something went wrong with {0}".format(0))
+        sys.exit("Something went wrong with {0}".format(pdb))
     if(req):
         # Get session id
         ver = req.text.split('action="/Verify_3D/temp/raw')[1].split(".dat")[0]
@@ -2137,6 +2137,10 @@ def main():
         sessionid = get_session_id(args.alignment_file)
     elif args.modeller_summary:
         sessionid = get_session_id(args.modeller_summary)
+        if os.path.dirname(args.modeller_summary) + os.sep != args.results:
+            print("Warning : the modeller summary path should be the same to "
+                  "the result path", file=sys.stderr)
+            args.results = os.path.dirname(args.modeller_summary) + os.sep
     else:
         sys.exit("One alignment file or a modeller summary file is required.")
     # Summary file reference
