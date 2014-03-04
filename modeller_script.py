@@ -2141,6 +2141,7 @@ def main():
             print("Warning : the modeller summary path should be the same to "
                   "the result path", file=sys.stderr)
             args.results = os.path.dirname(args.modeller_summary) + os.sep
+            os.chdir(args.results)
     else:
         sys.exit("One alignment file or a modeller summary file is required.")
     # Summary file reference
