@@ -55,10 +55,10 @@ def renum_pdb(pdb_file, activity):
             for line in pdb:
                 chain = line[20:22]
                 aa = line[17:20]
-                newres = int(line[22:26])
+                newres = line[22:26]
                 field = line[0:4]
                 if chain != chain_prev and field in ["ATOM" "HETATOM"]:
-                    num = newres - 1
+                    num = int(newres) - 1
                     chain_prev = chain
                 if((newres != res or aa != aa_prev) and field == "ATOM"):
                     aa_prev = aa
