@@ -23,8 +23,8 @@ def get_arguments():
                         help='Select operations.')
     parser.add_argument('-p', dest='pdb', type=str, required=True, nargs='+',
                         help="List of pdb files or codes.")
-    parser.add_argument('-s', dest='start_position', type=int, default=1,
-                        help="List of pdb files or codes (default : 1).")
+    # parser.add_argument('-s', dest='start_position', type=int, default=1,
+    #                    help="List of pdb files or codes (default : 1).")
     return parser.parse_args()
 
 
@@ -41,18 +41,25 @@ def get_numstring(val, maxval):
     return(strval)
 
 
-def renum_pdb(pdb_file, activity, start_position):
+# def renum_pdb(pdb_file, activity, start_position):
+def renum_pdb(pdb_file, activity):
     """
     """
     res = 0
-    num = start_position - 1
+    # num = start_position - 1
+    num = 0
     aa_prev = ""
+    chain_prev = ""
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
+                chain = line[20:22]
                 aa = line[17:20]
-                newres = line[22:26]
+                newres = int(line[22:26])
                 field = line[0:4]
+                if chain != chain_prev and field in ["ATOM" "HETATOM"]:
+                    num = newres - 1
+                    chain_prev = chain
                 if((newres != res or aa != aa_prev) and field == "ATOM"):
                     aa_prev = aa
                     res = newres
@@ -81,7 +88,8 @@ def main():
                 if args.activity == "sequence":
                     print(">{0}"
                     .format(".".join(os.path.basename(pdb).split(".")[:-1])))
-                renum_pdb(pdb, args.activity, args.start_position)
+                # renum_pdb(pdb, args.activity, args.start_position)
+                renum_pdb(pdb, args.activity)
             else:
                 raise ValueError
     except ValueError:
