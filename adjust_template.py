@@ -57,7 +57,7 @@ def renum_pdb(pdb_file, activity):
                 aa = line[17:20]
                 newres = line[22:26]
                 field = line[0:4]
-                if chain != chain_prev and field in ["ATOM" "HETATOM"]:
+                if chain != chain_prev and field == "ATOM":
                     num = int(newres) - 1
                     chain_prev = chain
                 if((newres != res or aa != aa_prev) and field == "ATOM"):
