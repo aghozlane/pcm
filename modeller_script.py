@@ -1612,7 +1612,7 @@ def save_picture(urlfile, output_file):
     """
     """
     try:
-        request = requests.get(urlfile)
+        request = requests.get(urlfile, verify=False)
         with open(output_file, "wb") as output_image:
             for block in request.iter_content(1024):
                 if not block:
@@ -1668,7 +1668,7 @@ def run_prosa(website_path, pdb, results):
             files = {'userfile': pdb_sent}
             # Send PDB file
             req = requests.post(website_path + "prosa.php", files=files,
-                                data=payload)
+                                data=payload, verify=False)
         assert(req.status_code == requests.codes.ok)
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb))
