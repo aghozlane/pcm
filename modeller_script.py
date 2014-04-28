@@ -62,12 +62,12 @@ except ImportError:
 
 
 __author__ = "Amine Ghozlane"
-__copyright__ = "Copyright 2013, University of Paris VII"
+__copyright__ = "Copyright 2014, INRA"
 __credits__ = ["Amine Ghozlane", "Joseph Rebehmed", "Alexandre G. de Brevern"]
 __license__ = "GPL"
 __version__ = "1.0.0"
 __maintainer__ = "Amine Ghozlane"
-__email__ = "amine.ghozlane@inserm.fr"
+__email__ = "amine.ghozlane@jouy.inra.fr"
 __status__ = "Developpement"
 
 
@@ -189,18 +189,15 @@ class FullPaths(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         # If false then its a list
         if not isinstance(values, basestring):
-                out = []
-                for val in values:
-                        if os.path.isfile(val):
-                            out += [os.path.abspath(
-                                            os.path.expanduser(val))]
-                        elif os.path.isdir(val):
-                                out += [os.path.abspath(
-                                            os.path.expanduser(val))
-                                        + os.sep]
-                        else:
-                                out += [val]
-                setattr(namespace, self.dest, out)
+            out = []
+            for val in values:
+                if os.path.isfile(val):
+                    out += [os.path.abspath(os.path.expanduser(val))]
+                elif os.path.isdir(val):
+                    out += [os.path.abspath(os.path.expanduser(val)) + os.sep]
+                else:
+                    out += [val]
+            setattr(namespace, self.dest, out)
         # Value is a string
         else:
             if os.path.isfile(values):
@@ -379,7 +376,7 @@ def get_arguments():
 
 
 def extract_elements(template_search_file, regex_text, order):
-    """
+    """Extract elements identified from hhsearch, hmmer, blast
     """
     elements = []
     regex = re.compile(regex_text)
@@ -413,9 +410,9 @@ def extract_elements(template_search_file, regex_text, order):
 def identify_template(conf_data, multifasta_file, thread, pdb_identification,
                       pdb_identification_database, pdb_identification_path,
                       number_best_pdb_identification, results):
+    """Run the search for the best structural supports
     """
-    """
-    PDB = []
+    pdb = []
     elements = []
     if(len(pdb_identification_path) == len(pdb_identification)):
         list_path = pdb_identification_path
@@ -460,16 +457,16 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         # Select PDB
         if (number_best_pdb_identification < 0):
             sys.exit("Error: number_best_pdb_identification should be > 0.")
-        PDB += get_unique([hits[0] for hits in elements])
-        PDB = PDB[0:number_best_pdb_identification]
+        pdb += get_unique([hits[0] for hits in elements])
+        pdb = pdb[0:number_best_pdb_identification]
         # if strategy == "best" and len(elements) > 0:
-        #    PDB += [elements[0][0]]
-    nb_pdb = len(PDB)
+        #    pdb += [elements[0][0]]
+    nb_pdb = len(pdb)
     if nb_pdb > 1:
-        PDB = get_unique_no_order(PDB)
+        pdb = get_unique_no_order(pdb)
     elif nb_pdb == 0:
         sys.exit("No template structure found !!")
-    return PDB
+    return pdb
 
 
 def download_pdb(conf_data, pdb, results):
@@ -482,13 +479,13 @@ def download_pdb(conf_data, pdb, results):
     # Open our local file for writing
     outfilename = results + pdb + ".pdb"
     try:
-        f = urllib2.urlopen(conf_data.hdict["download_url"] + pdb + ".pdb")
+        rscb = urllib2.urlopen(conf_data.hdict["download_url"] + pdb + ".pdb")
         with open(outfilename, "wt") as local_file:
-            local_file.write(f.read())
-    except urllib2.HTTPError, e:
-        print ("HTTP Error:", e.code, pdb, file=sys.stderr)
-    except urllib2.URLError, e:
-        print ("URL Error:", e.reason, pdb, file=sys.stderr)
+            local_file.write(rscb.read())
+    except urllib2.HTTPError, errormes:
+        print ("HTTP Error:", errormes.code, pdb, file=sys.stderr)
+    except urllib2.URLError, errormes:
+        print ("URL Error:", errormes.reason, pdb, file=sys.stderr)
     except IOError:
         print("Something went wrong with {0}".format(outfilename),
               file=sys.stderr)
@@ -797,7 +794,7 @@ def write_pir_file(aln_pir_file, data_fasta, pdb_codes, pdb_files,
 
 
 def get_multifasta_data(multifasta_file):
-    """
+    """Extract the sequence data from multifasta
     """
     regex_head = re.compile(r"^>([\w-]+)")
     regex_protein = re.compile(r"^([A-Za-z]+)")
@@ -823,7 +820,7 @@ def get_multifasta_data(multifasta_file):
 
 
 def get_pdb_sequence(pdb_file, seqdict):
-    """
+    """Get PDB sequence
     """
     pdb_seq = ""
     res = 0
@@ -1609,7 +1606,7 @@ def load_summary(summary_file):
 
 
 def save_picture(urlfile, output_file):
-    """
+    """Download and save the picture
     """
     try:
         request = requests.get(urlfile, verify=False)
@@ -1699,7 +1696,7 @@ def run_prosa(website_path, pdb, results):
 
 
 def load_verify3D(verify3D_result, type_data=0):
-    """
+    """Load verify3D result
     """
     request = r"^[a-z]+\s+([A-Z])\s+([0-9]+)\s+[0-9.-]+\s+([0-9.-]+)"
     if(type_data):
@@ -1891,7 +1888,7 @@ def plot_verify3D_profile(summary_data, data_verify3D, number_best, results,
 
 
 def load_interest_atom(interest_atom_file):
-    """
+    """Get a list of interesting atop
     """
     atom_dict = {}
     try:
@@ -1914,7 +1911,7 @@ def load_interest_atom(interest_atom_file):
 
 
 def load_PDB_interest_atom(pdb_file, interest_atom_dict):
-    """
+    """Get the PDB version
     """
     atom_list = []
     try:
