@@ -2159,12 +2159,19 @@ def main():
                              pdb_files, args.model_name, args.model_quality,
                              args.number_model, psipred_result)
         save_general_data(atm, args.results, sessionid)
-    if MODELLER and MATPLOTLIB and "profile" in args.list_operations:
+    if (MODELLER and MATPLOTLIB and "profile" in args.list_operations and
+        os.path.isfile(summary_file)):
+        summary_data = load_summary(summary_file)
+        # Check number of model
+        if args.number_best > args.number_model:
+            args.number_best = args.number_model
         # List of models
-        list_model = [args.model_name + ".B" + str(99990000 + i)
-                      for i in xrange(1, args.number_model + 1)
-                      if os.path.isfile(args.model_name + ".B"
-                                        + str(99990000 + i) + ".pdb")]
+        # list_model = [args.model_name + ".B" + str(99990000 + i)
+        #              for i in xrange(1, args.number_model + 1)
+        #              if os.path.isfile(args.model_name + ".B"
+        #                                + str(99990000 + i) + ".pdb")]
+        list_model = [pdb for pdb in sorted(summary_data.iteritems(),
+                                            key=lambda x: x[1][1])]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
         # Load template profile
         (list_template_profile,
@@ -2210,14 +2217,10 @@ def main():
                                     list_delta_dope, args.results,
                                     pdb_codes[i])
         # Histogram of DOPE
-        if (os.path.isfile(summary_file)):
-            summary_data = load_summary(summary_file)
-            histplot([summary_data[model][1]
-                      for model in summary_data],
-                     ["Dope score", "Frequency", "Dope score histogram"],
-                     args.results + "dope_per_model_{0}.svg".format(sessionid))
-        else:
-            sys.exit("{0} does not exist".format(summary_file))
+        histplot([summary_data[model][1]
+                  for model in summary_data],
+                 ["Dope score", "Frequency", "Dope score histogram"],
+                 args.results + "dope_per_model_{0}.svg".format(sessionid))
     if(args.structure_check and os.path.isfile(summary_file)
        and "check" in args.list_operations):
         if not args.psipred and "proq" in args.structure_check:

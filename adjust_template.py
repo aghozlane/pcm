@@ -1,13 +1,47 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#    A copy of the GNU General Public License is available at
+#    http://www.gnu.org/licenses/gpl-3.0.html
+
+"""Pre-clean pdb files."""
+
+from __future__ import print_function
 import sys
 import os
 import argparse
+import glob
+import csv
+import urllib2
 
-seqdict = {"ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D",
-           "CYS":"C", "GLU":"E", "GLN":"Q", "GLY":"G",
-           "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K",
-           "MET":"M", "PHE":"F", "PRO":"P", "SER":"S",
-           "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V"}
+__author__ = "Amine Ghozlane"
+__copyright__ = "Copyright 2014, INRA"
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Amine Ghozlane"
+__email__ = "amine.ghozlane@jouy.inra.fr"
+__status__ = "Developpement"
+
+
+def isfile(path):
+    """Check if path is an existing file.
+      :Parameters:
+          path: Path to the file
+    """
+    if not os.path.isfile(path):
+        if os.path.isdir(path):
+            msg = "{0} is a directory".format(path)
+        else:
+            msg = "{0} does not exist.".format(path)
+        raise argparse.ArgumentTypeError(msg)
+    return path
 
 
 def get_arguments():
@@ -16,15 +50,20 @@ def get_arguments():
     """
     # Parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, usage=
-                                     "{0} file.pdb".format(sys.argv[0]))
-    parser.set_defaults(activity="renum")
-    parser.add_argument("-a", dest="activity", type=str,
-                        choices=["renum", "sequence"],
-                        help='Select operations.')
-    parser.add_argument('-p', dest='pdb', type=str, required=True, nargs='+',
+                                     "{0} -h".format(sys.argv[0]))
+    parser.add_argument('-i', dest='input_file', type=isfile,
+                        help="List of PDB of interest (txt or fasta file).")
+    parser.add_argument('-p', dest='pdb', type=str, nargs='+', default=[],
                         help="List of pdb files or codes.")
-    # parser.add_argument('-s', dest='start_position', type=int, default=1,
-    #                    help="List of pdb files or codes (default : 1).")
+    parser.add_argument('-d', dest='pdb_dir', type=str, nargs='+',
+                        help="Directory that contains PDB files.")
+    parser.add_argument("-a", dest="activity", type=str, default="clean",
+                        choices=["renum", "sequence", "clean"],
+                        help="Select one operation : renum: to renumerotate the"
+                        "pdb file, sequence: get the amino-acid sequence or "
+                        "clean: renumerotate and on select ATOM.")
+    parser.add_argument('-o', dest='output_dir', type=str, required=True,
+                        help="Output directory.")
     return parser.parse_args()
 
 
@@ -41,8 +80,7 @@ def get_numstring(val, maxval):
     return(strval)
 
 
-# def renum_pdb(pdb_file, activity, start_position):
-def renum_pdb(pdb_file, activity):
+def renum_pdb(pdb_file, activity, seqdict, out):
     """
     """
     res = 0
@@ -65,35 +103,139 @@ def renum_pdb(pdb_file, activity):
                     res = newres
                     num += 1
                     if activity == "sequence":
-                        sys.stdout.write(seqdict[aa])
+                        print(seqdict[aa], file=out, end="")
+                        #sys.stdout.write(seqdict[aa])
                 pdb_line = list(line)
                 if(field == "ATOM"):
                     pdb_line[22:26] = get_numstring(num, 4)
                 pdb_line = "".join(pdb_line)
                 if activity == "renum":
-                    sys.stdout.write(pdb_line)
+                    print(pdb_line, file=out, end="")
+                elif activity == "clean" and field == "ATOM":
+                    print(pdb_line, file=out, end="")
+                    #sys.stdout.write(pdb_line)
                 # print(line[23:26])
-            sys.stdout.write("\n")
+            print(os.linesep, file=out, end="")
+            #sys.stdout.write("\n")
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
+
+
+def check_directory(pdb_dir):
+    """Get the list of files in the directory
+      Arguments:
+          pdb_dir: Path to the directory that contains PDB files
+      Returns: List of PDB files.
+    """
+    return glob.glob('{0}{1}*.pdb'.format(pdb_dir, os.sep))
+
+
+def read_list(input_file):
+    """
+    """
+    pdb_list = []
+    try:
+        with open(input_file) as input_f:
+            input_f_reader = csv.reader(input_f, delimiter="\t")
+            for line in input_f_reader:
+                pdb_list.append(line[0].replace("\n", "").replace("\r", "").split(" ")[0])
+        assert(len(pdb_list) > 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(input_file))
+    except AssertionError:
+        sys.exit("No PDB element read from {0}".format(input_file))
+    return pdb_list
+
+
+def read_fasta(input_file):
+    """
+    """
+    pdb_list = []
+    try:
+        with open(input_file) as input_f:
+            for line in input_f:
+                if line[0] == ">":
+                    pdb_list.append(line[1:].replace("\n", "").replace("\r", "").split(" ")[0])
+        assert(len(pdb_list) > 0)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(input_file))
+    except AssertionError:
+        sys.exit("No PDB element read from {0}".format(input_file))
+    return pdb_list
+
+
+def download_pdb(pdb, results):
+    """Download PDB file
+     :Parameters:
+        pdb: Name of the pdb file
+        results: Output directory
+    """
+    # Open our local file for writing
+    outfilename = results + os.sep + pdb + ".pdb"
+    try:
+        rscb = urllib2.urlopen("http://www.rcsb.org/pdb/files/" + pdb + ".pdb")
+        with open(outfilename, "wt") as local_file:
+            local_file.write(rscb.read())
+    except urllib2.HTTPError, errormes:
+        print ("HTTP Error:", errormes.code, pdb, file=sys.stderr)
+    except urllib2.URLError, errormes:
+        print ("URL Error:", errormes.reason, pdb, file=sys.stderr)
+    except IOError:
+        print("Something went wrong with {0}".format(outfilename),
+              file=sys.stderr)
+    return outfilename
 
 
 def main():
     """
     """
+    seqdict = {"ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D",
+               "CYS":"C", "GLU":"E", "GLN":"Q", "GLY":"G",
+               "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K",
+               "MET":"M", "PHE":"F", "PRO":"P", "SER":"S",
+               "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V"}
     args = get_arguments()
-    try:
-        for pdb in args.pdb:
-            if pdb.endswith(".pdb") and os.path.isfile(pdb):
+    # Get PDB element from a fasta or a list
+    if args.input_file:
+        if (args.input_file.endswith(".fasta")
+            or args.input_file.endswith(".faa")):
+            args.pdb += read_fasta(args.input_file)
+        else:
+            args.pdb += read_list(args.input_file)
+    # Get the PDB files from a directory
+    if args.pdb_dir:
+        args.pdb += check_directory(args.pdb_dir)
+    if not os.path.isdir(args.output_dir):
+        os.mkdir(args.output_dir)
+    temp_dir = args.output_dir + os.sep + "temp"
+    if args.activity == "sequence":
+        output_type = ".fasta"
+    else:
+        output_type = ".pdb"
+    # Start working on pdb
+    toremove = []
+    for pdb in args.pdb:
+        if not pdb.endswith(".pdb") and not os.path.isfile(pdb):
+            # Create a temporary directory
+            if not os.path.isdir(temp_dir):
+                os.mkdir(temp_dir)
+            # Download pdb file in temp directory
+            pdb = download_pdb(pdb, temp_dir)
+            toremove.append(pdb)
+        pdb_name = ".".join(os.path.basename(pdb).split(".")[:-1])
+        output_file = args.output_dir + os.sep + pdb_name + output_type
+        try:
+            with open(output_file, "wt") as out:
                 if args.activity == "sequence":
-                    print(">{0}"
-                    .format(".".join(os.path.basename(pdb).split(".")[:-1])))
-                # renum_pdb(pdb, args.activity, args.start_position)
-                renum_pdb(pdb, args.activity)
-            else:
-                raise ValueError
-    except ValueError:
-        sys.exit("Please indicate pdb file as entry (*.pdb)")
+                    print(">{0}".format(pdb_name), file=out)
+                renum_pdb(pdb, args.activity, seqdict, out)
+        except IOError:
+            sys.exit("Error cannot open {0}".format(output_file))
+    for temp_pdb in toremove:
+        if os.path.isfile(temp_pdb):
+            os.remove(temp_pdb)
+    if os.path.isdir(temp_dir):
+        os.rmdir(temp_dir)
 
 if __name__ == '__main__':
     main()
