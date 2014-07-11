@@ -2170,8 +2170,10 @@ def main():
         #              for i in xrange(1, args.number_model + 1)
         #              if os.path.isfile(args.model_name + ".B"
         #                                + str(99990000 + i) + ".pdb")]
-        list_model = [pdb for pdb in sorted(summary_data.iteritems(),
-                                            key=lambda x: x[1][1])]
+        list_model = [".".join(os.path.basename(pdb[0]).split(".")[:-1])
+                      for pdb in sorted(summary_data.iteritems(),
+                                        key=lambda x: x[1][1])]
+        list_model = list_model[:5]
         list_model_files = [args.results + i + ".pdb" for i in list_model]
         # Load template profile
         (list_template_profile,
