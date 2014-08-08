@@ -293,7 +293,7 @@ def get_arguments():
                                  "jackhmmer", "blastp"],
                         help="Indicate the software to search homologous.")
     parser.add_argument('-pd', dest='pdb_identification_database',
-                        type=isfile, nargs='+', default=[], action=FullPaths,
+                        type=str, nargs='+', default=[], action=FullPaths,
                         help="Indicate the support database for template "
                         "research.")
     parser.add_argument('-pp', dest='pdb_identification_path', type=isdir,
