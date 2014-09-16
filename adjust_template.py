@@ -91,6 +91,7 @@ def renum_pdb(pdb_file, activity, seqdict, out):
     try:
         with open(pdb_file, "rt") as pdb:
             for line in pdb:
+                do_not_print = False
                 chain = line[20:22]
                 aa = line[17:20]
                 newres = line[22:26]
@@ -108,11 +109,17 @@ def renum_pdb(pdb_file, activity, seqdict, out):
                 pdb_line = list(line)
                 if(field == "ATOM"):
                     pdb_line[22:26] = get_numstring(num, 4)
+                if pdb_line[16] != " " and field == "ATOM":
+                    if pdb_line[16] == "A":
+                        pdb_line[16] = " "
+                    else:
+                        do_not_print = True
                 pdb_line = "".join(pdb_line)
-                if activity == "renum":
-                    print(pdb_line, file=out, end="")
-                elif activity == "clean" and field == "ATOM":
-                    print(pdb_line, file=out, end="")
+                if not do_not_print:
+                    if activity == "renum":
+                        print(pdb_line, file=out, end="")
+                    elif activity == "clean" and field == "ATOM":
+                        print(pdb_line, file=out, end="")
                     #sys.stdout.write(pdb_line)
                 # print(line[23:26])
             print(os.linesep, file=out, end="")
