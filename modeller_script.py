@@ -1809,8 +1809,6 @@ def parse_proq(proq_result):
                     lgscore = float(lgscore_match.group(1))
                 elif maxsub_match:
                     maxsub = float(maxsub_match.group(1))
-            print(lgscore)
-            print(maxsub)
             assert(lgscore != None and maxsub != None)
     except IOError:
         sys.exit("Error cannot open {0}".format(proq_result))
