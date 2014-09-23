@@ -1835,9 +1835,15 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
     data_verify3D_smooth = {}
     num_struct = 0
     if('procheck' in structure_check):
-        procheck_path = path_check.pop(0)
-    if('proq_standalone' in structure_check and REQUESTS):
-        proq_path = path_check.pop(0)
+        if len(path_check) > 0:
+            procheck_path = path_check.pop(0)
+        else:
+            proq_path = ""
+    if('proq_standalone' in structure_check):
+        if len(path_check) > 0:
+            proq_path = path_check.pop(0)
+        else:
+            proq_path = ""
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
         if num_struct >= number_best:
             break
@@ -1846,7 +1852,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             run_command(replace_motif(conf_data.hdict['procheck'],
                                       procheck_path, "", [pdb[0]], "", "", "",
                                       "", ""))
-        if('proq_standalone' in structure_check and REQUESTS):
+        if('proq_standalone' in structure_check):
             print("Run ProQ standalone version for " + pdb[0])
             output_proq = "proq_" + pdb[0]
             if pred:
