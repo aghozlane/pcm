@@ -350,7 +350,7 @@ def get_arguments():
                         default=["procheck", "proq", "prosa", "verify3D"],
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
-                        'results).')
+                        'results - do not require ProQ and ProQ standalone).')
     parser.add_argument('-k', dest='path_check', type=isdir, default=None,
                         action=FullPaths, nargs="+",
                         help='Indicate the path to procheck/proq softwares'
