@@ -1823,7 +1823,7 @@ def parse_proq(proq_result):
 
 
 def run_checking(conf_data, summary_data, structure_check, path_check,
-                 number_best, pred, REQUESTS, results):
+                 number_best, pred, psipred_file, REQUESTS, results):
     """
      :Parameters:
       - conf_data: Configuration dictionary
@@ -1855,10 +1855,10 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
         if('proq_standalone' in structure_check):
             print("Run ProQ standalone version for " + pdb[0])
             output_proq = "proq_" + pdb[0]
-            if pred:
+            if psipred_file:
                 run_command(replace_motif(conf_data.hdict['proq_psipred'],
                                           proq_path, "", [pdb[0]], output_proq,
-                                          "", pred, "", ""))
+                                          "", psipred_file, "", ""))
             else:
                 run_command(replace_motif(conf_data.hdict['proq_alone'],
                                           proq_path, "", [pdb[0]], output_proq,
@@ -2287,7 +2287,8 @@ def main():
                  args.results + "dope_per_model_{0}.svg".format(sessionid))
     if(args.structure_check and os.path.isfile(summary_file)
        and "check" in args.list_operations):
-        if not args.psipred and "proq" in args.structure_check:
+        if(not args.psipred and "proq" in args.structure_check 
+           or "proq_standalone" in args.structure_check):
             print("It is recommanded to provide the secondary structure "
                   "prediction using psipred to use ProQ.")
         # Histogram of DOPE
@@ -2300,7 +2301,7 @@ def main():
          data_verify3D, data_verify3D_smooth) = run_checking(
                                         conf_data, summary_data,
                                         args.structure_check, args.path_check,
-                                        args.number_best, pred,
+                                        args.number_best, pred, args.psipred,
                                         REQUESTS, args.results)
         if(args.list_atom):
             interest_atom_dict = load_interest_atom(args.list_atom)
