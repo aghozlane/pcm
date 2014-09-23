@@ -124,6 +124,10 @@ class ModelingConfig:
                                                  'procheck')
         self.hdict["prosa"] = self.config.get('Checking_config', 'prosa')
         self.hdict["proq"] = self.config.get('Checking_config', 'proq')
+        self.hdict["proq_psipred"] = self.config.get('Checking_config',
+                                                     'proq_psipred')
+        self.hdict["proq_alone"] = self.config.get('Checking_config',
+                                                   'proq_alone')
         self.hdict["verify3D"] = self.config.get('Checking_config',
                                                  'verify3D')
 
@@ -170,6 +174,10 @@ class ModelingConfig:
                         "%path_softprocheck.scr %pdb 1.5")
         self.config.set('Checking_config', 'proq',
                         "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
+        self.config.set('Checking_config', 'proq_psipred',
+                        "%path_softProQ -model %pdb -ss %psipred > %output")
+        self.config.set('Checking_config', 'proq_alone',
+                        "%path_softProQ -model %pdb > %output")
         self.config.set('Checking_config', 'prosa',
                         "https://prosa.services.came.sbg.ac.at/")
         self.config.set('Checking_config', 'verify3D',
@@ -337,14 +345,16 @@ def get_arguments():
                         default=7, help='Confidence limit for psipred'
                         '(0-9 - default = >7).')
     parser.add_argument('-s', dest='structure_check', type=str, nargs='+',
-                        choices=["procheck", "proq", "prosa", "verify3D"],
+                        choices=["procheck", "proq", "prosa",
+                                 "verify3D", "proq_standalone"],
                         default=["procheck", "proq", "prosa", "verify3D"],
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results).')
     parser.add_argument('-k', dest='path_check', type=isdir, default=None,
-                        action=FullPaths,
-                        help='Indicate the path to procheck software.')
+                        action=FullPaths, nargs="+",
+                        help='Indicate the path to procheck/proq softwares'
+                              '- if both are used first procheck, next proq.')
     parser.add_argument('-sb', dest='number_best', type=int, default=5,
                         help='Select number of models for verification'
                         '(from the best model according to dope score - '
@@ -1783,6 +1793,35 @@ def run_verify3D(website_path, pdb, results):
     return data_verify3D, data_verify3D_smooth
 
 
+def parse_proq(proq_result):
+    """Parse proq standalone result
+    """
+    lgscore_regex = re.compile(r"^LGscore:\s+(\S+)")
+    maxsub_regex = re.compile(r"^MaxSub:\s+(\S+)")
+    lgscore = None
+    maxsub = None
+    try:
+        with open(proq_result, "rt") as proq:
+            for line in proq:
+                lgscore_match = lgscore_regex.match(line)
+                maxsub_match = maxsub_regex.match(line)
+                if lgscore_match:
+                    lgscore = float(lgscore_match.group(1))
+                elif maxsub_match:
+                    maxsub = float(maxsub_match.group(1))
+            print(lgscore)
+            print(maxsub)
+            assert(lgscore != None and maxsub != None)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(proq_result))
+    except ValueError:
+        sys.exit("Bad casting with line : {0}".format(line))
+    except AssertionError:
+        sys.exit("The program has failed to parse proq result:"
+                 "{0}".format(proq_result))
+    return [maxsub, lgscore]
+
+
 def run_checking(conf_data, summary_data, structure_check, path_check,
                  number_best, pred, REQUESTS, results):
     """
@@ -1795,15 +1834,32 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
     data_verify3D = {}
     data_verify3D_smooth = {}
     num_struct = 0
+    if('procheck' in structure_check):
+        procheck_path = path_check.pop(0)
+    if('proq_standalone' in structure_check and REQUESTS):
+        proq_path = path_check.pop(0)
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
         if num_struct >= number_best:
             break
         if('procheck' in structure_check):
             print("Run procheck for " + pdb[0])
             run_command(replace_motif(conf_data.hdict['procheck'],
-                                      path_check, "", [pdb[0]], "", "", "",
+                                      procheck_path, "", [pdb[0]], "", "", "",
                                       "", ""))
-        if('proq' in structure_check and REQUESTS):
+        if('proq_standalone' in structure_check and REQUESTS):
+            print("Run ProQ standalone version for " + pdb[0])
+            output_proq = "proq_" + pdb[0]
+            if pred:
+                run_command(replace_motif(conf_data.hdict['proq_psipred'],
+                                          proq_path, "", [pdb[0]], output_proq,
+                                          "", pred, "", ""))
+            else:
+                run_command(replace_motif(conf_data.hdict['proq_alone'],
+                                          proq_path, "", [pdb[0]], output_proq,
+                                          "", "", "", ""))
+            # Parse ProQ result
+            data_proq += [[pdb[0]] + parse_proq(output_proq)]
+        elif('proq' in structure_check and REQUESTS):
             print("Run ProQ for " + pdb[0])
             status = True
             try:
