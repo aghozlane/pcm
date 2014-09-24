@@ -1852,7 +1852,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
                                       "", ""))
         if('proq_standalone' in structure_check):
             print("Run ProQ standalone version for " + pdb[0])
-            output_proq = "proq_" + pdb[0]
+            output_proq = "proq_" + ".".join(pdb[0].spit(".")[:-1]) + ".txt"
             if psipred_file:
                 run_command(replace_motif(conf_data.hdict['proq_psipred'],
                                           proq_path, "", [pdb[0]], output_proq,
