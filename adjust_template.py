@@ -109,11 +109,11 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
                 pdb_line = list(line)
                 if(field == "ATOM"):
                     pdb_line[22:26] = get_numstring(num, 4)
-                if pdb_line[16] != " " and field == "ATOM":
-                    if pdb_line[16] == "A":
-                        pdb_line[16] = " "
-                    else:
-                        do_not_print = True
+                    if pdb_line[16] != " ":
+                        if pdb_line[16] == "A":
+                            pdb_line[16] = " "
+                        else:
+                            do_not_print = True
                 pdb_line = "".join(pdb_line)
                 if not do_not_print:
                     if activity == "renum":
