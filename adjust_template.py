@@ -80,7 +80,7 @@ def get_numstring(val, maxval):
     return(strval)
 
 
-def renum_pdb(pdb_file, activity, seqdict, out):
+def renum_pdb(pdb_file, activity, seqdict, out, out_str):
     """
     """
     res = 0
@@ -119,13 +119,16 @@ def renum_pdb(pdb_file, activity, seqdict, out):
                     if activity == "renum":
                         print(pdb_line, file=out, end="")
                     elif activity == "clean" and field == "ATOM":
-                        print(pdb_line, file=out, end="")
+                        #print(pdb_line, file=out, end="")
+                        out_str += pdb_line
                     #sys.stdout.write(pdb_line)
                 # print(line[23:26])
-            print(os.linesep, file=out, end="")
+            if activity != "clean":
+                print(os.linesep, file=out, end="")
             #sys.stdout.write("\n")
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
+    return out_str
 
 
 def check_directory(pdb_dir):
@@ -193,6 +196,41 @@ def download_pdb(pdb, results):
     return outfilename
 
 
+def get_unique(seq):
+    # Order preserving
+    seen = set()
+    return [x for x in seq if x not in seen and not seen.add(x)]
+
+
+def detect_chain_A(out_str):
+    """Detect if a chain A is present
+    """
+    chain_types = []
+    for line in out_str.split('\n'):
+        chain = line[21:22]
+        if chain == "A":
+            return True, chain_types
+        elif chain != "":
+            chain_types += [chain]
+    chain_types.sort()
+    chain_types = get_unique(chain_types)
+    return False, chain_types
+
+
+def set_chain_A(out_str, chain_types, out):
+    """Reset chain A
+    """
+    for line in out_str.split('\n'):
+        chain = line[21:22]
+        if chain == chain_types[0]:
+            pdb_line = list(line)
+            pdb_line[21] = "A"
+            pdb_line = "".join(pdb_line)
+            print(pdb_line, file=out, end="\n")
+        else:
+            print(line, file=out, end="\n")
+
+
 def main():
     """
     """
@@ -235,7 +273,13 @@ def main():
             with open(output_file, "wt") as out:
                 if args.activity == "sequence":
                     print(">{0}".format(pdb_name), file=out)
-                renum_pdb(pdb, args.activity, seqdict, out)
+                out_str = renum_pdb(pdb, args.activity, seqdict, out, "")
+                if args.activity == "clean":
+                    chain_A_ok, chain_types = detect_chain_A(out_str)
+                    if chain_A_ok:
+                        print(out_str, file=out)
+                    else:
+                        set_chain_A(out_str, chain_types, out)
         except IOError:
             sys.exit("Error cannot open {0}".format(output_file))
     for temp_pdb in toremove:
