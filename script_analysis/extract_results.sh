@@ -1,18 +1,19 @@
 #!/bin/bash
 
-###BLAA
-#datasets=(/datatank/transit/data_aghozlane/three_templates/blaa_forsberg_complement/blaa_forsberg_complement_ref /datatank/transit/data_aghozlane/three_templates/blaa_forsberg_complement/blaa_forsberg_complement_tneg)
-#results=(blaa_forsberg_complement_by_ref.csv blaa_forsberg_complement_by_tneg.csv)
+#check arguments
+if [ $# -ne "4" ]
+then
+    echo "Usage : $0 <reference_dir> <negative_dir> <reference_result> <negative_result>"
+    exit
+fi
 
-###BLAA2
-datasets=(/export/mgps/home/aghozlane/data_evotar/three_templates/blaa2/blaa2_candidates_by_ref /export/mgps/home/aghozlane/data_evotar/three_templates/blaa2/blaa2_candidates_by_tneg)
-results=(blaa2_candidates_by_ref.csv blaa2_candidates_by_tneg.csv)
 
-#one shot
-#datasets=(/datatank/transit/data_eruppe/blad/blad_ref_pcm/blad_ref/SPEA)
-#results=(resume_SPEA.csv)
 
-script="/datatank/transit/data_eruppe/pcm"
+datasets=("$1" "$2")
+results=("$3" "$4")
+
+
+script="$HOME/Modeller/"
 for i in `seq 0 1`
 #for i in `seq 0 0`
 do
