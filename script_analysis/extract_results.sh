@@ -13,8 +13,8 @@ datasets=("$1" "$2")
 results=("$3" "$4")
 
 
-script='$HOME/Modeller/'
-proq_path='$HOME/soft/ProQv1.2/'
+script="$HOME/Modeller/"
+proq_path="$HOME/soft/ProQv1.2/"
 
 for i in `seq 0 1`
 #for i in `seq 0 0`
