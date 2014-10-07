@@ -13,8 +13,9 @@ datasets=("$1" "$2")
 results=("$3" "$4")
 
 
-script="$HOME/Modeller/"
-proq="$HOME/soft/ProQv1.2"
+script='$HOME/Modeller/'
+proq_path='$HOME/soft/ProQv1.2/'
+
 for i in `seq 0 1`
 #for i in `seq 0 0`
 do
@@ -49,7 +50,7 @@ do
             echo "proq file is missing for $i, start to re-run modeller_script" >&2
             #echo "$script/Modeller/modeller_script.py -k $script/soft/procheck/ -l check -sm $summary -d $horiz"
             echo "$summary">&2
-            $script/modeller_script.py -s proq_standalone -l check -sm $summary -d $horiz -k $proq 1>&2  # 2> $rep/log_check.txt  
+            $script/modeller_script.py -s proq_standalone -l check -sm $summary -d $horiz -k $proq_path 1>&2  # 2> $rep/log_check.txt  
             prosa=$(ls -1 $rep/result_prosa_*.txt  2>/dev/null |head -1)
             proq=$(ls -1 $rep/result_proq_*.txt  2>/dev/null |head -1)
             horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )
