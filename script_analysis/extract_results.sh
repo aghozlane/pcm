@@ -32,12 +32,22 @@ do
     #horiz=$(find "$rep" -name "/*.horiz"|head -1)
     if [ -f "$summary" ]
     then
-        if [ ! -f "$prosa" ] || [ ! -f "$proq" ]
+        if [ ! -f "$prosa" ] 
         then
             echo "PROSA file is missing for $i, start to re-run modeller_script" >&2
             #echo "$script/Modeller/modeller_script.py -k $script/soft/procheck/ -l check -sm $summary -d $horiz"
             echo "$summary">&2
-            $script/Modeller/modeller_script.py -s proq prosa verify3D -l check -sm $summary -d $horiz 1>&2  # 2> $rep/log_check.txt  
+            $script/Modeller/modeller_script.py -s prosa -l check -sm $summary -d $horiz 1>&2  # 2> $rep/log_check.txt  
+            prosa=$(ls -1 $rep/result_prosa_*.txt  2>/dev/null |head -1)
+            proq=$(ls -1 $rep/result_proq_*.txt  2>/dev/null |head -1)
+            horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )
+            echo "done..." >&2
+        fi
+        if [ ! -f "$proq" ]
+            echo "proq file is missing for $i, start to re-run modeller_script" >&2
+            #echo "$script/Modeller/modeller_script.py -k $script/soft/procheck/ -l check -sm $summary -d $horiz"
+            echo "$summary">&2
+            $script/Modeller/modeller_script.py -s proq_standalone -l check -sm $summary -d $horiz 1>&2  # 2> $rep/log_check.txt  
             prosa=$(ls -1 $rep/result_prosa_*.txt  2>/dev/null |head -1)
             proq=$(ls -1 $rep/result_proq_*.txt  2>/dev/null |head -1)
             horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )
@@ -54,12 +64,8 @@ do
             zscore=$(tail -n +2 $prosa |head -1 |awk '{print $2}'|sed -e  's/\r//g'  )
             maxsub=$(tail -n +2 $proq |head -1 |awk '{print $2}'| sed -e  's/\r//g' )
             lgscore=$(tail -n +2 $proq |head -1 |awk '{print $3}'| sed -e  's/\r//g')
-            
-            #fuck=$(basename $rep)
-            #fuck_suite=${fuck:3:${#fuck}}
 
             echo -e "$best_model\t$molpdf\t$dope\t$normalized_dope\t$GA341_score\t$zscore\t$maxsub\t$lgscore"
-            #echo -e "${fuck}${fuck_suite}\t$molpdf\t$dope\t$normalized_dope\t$GA341_score\t$zscore\t$maxsub\t$lgscore"
         fi
     else
         echo "Modeller_summary file is missing for $rep" >&2
