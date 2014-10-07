@@ -44,6 +44,7 @@ do
             echo "done..." >&2
         fi
         if [ ! -f "$proq" ]
+        then
             echo "proq file is missing for $i, start to re-run modeller_script" >&2
             #echo "$script/Modeller/modeller_script.py -k $script/soft/procheck/ -l check -sm $summary -d $horiz"
             echo "$summary">&2
