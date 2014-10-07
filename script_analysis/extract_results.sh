@@ -56,7 +56,7 @@ do
             horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )
             echo "done..." >&2
         fi
-        if [  -f  "$prosa"  ]
+        if [  -f  "$prosa"  ] && [ -f "$proq" ]
         then 
             best_model=$(tail -n +2 $summary |head -1 |cut -s -f1|sed -e  's/\r//g')
             dope=$(tail -n +2 $summary |head -1 |cut -s -f3|sed -e  's/\r//g')
