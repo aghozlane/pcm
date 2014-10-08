@@ -40,9 +40,6 @@ do
         best_model=$(tail -n +2 $summary |head -1 |cut -s -f1|sed -e  's/\r//g')
         echo "$best_model"
         cp $rep/$best_model $candidate_dir/
-        #fuck=$(basename $rep)
-        #fuck_suite=${fuck:3:${#fuck}}
-        #cp $rep/$best_model $candidate_dir/${fuck}${fuck_suite}.pdb
     fi
 done
 
@@ -52,5 +49,5 @@ done
 # Get reference ?
 
 # run alignment
-script=/datatank/transit/data_eruppe/pcm
+script=$HOME
 $script/PDBRMSD/PDBRMSD.py -q $candidate_dir/ -t $2/ -s TMalign mammoth  -p $script/soft/tmscore/ $script/soft/mammoth_compila/ -r $3/ -b 1
