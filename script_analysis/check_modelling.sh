@@ -41,7 +41,7 @@ do
         if [ "$nb_pdb" -eq 0 ]
         then
             echo "run on $output_dir2"
-            python $HOME/save/Modeller/modeller_script.py -l model check -s prosa proq_standalone  -f $file -pi blastp  -pd $5 -pr $HOME/result/metahit_etienne/cleaned_pdb/ -j $HOME/soft/psipred/ -r $output_dir2  -k $HOME/soft/procheck/ $HOME/soft/ProQv1.2/ -q max -n 100 -nb 3  -t $CPU &> $output_dir2/log_modeller.txt
+            python $HOME/Modeller/modeller_script.py -l model check -s prosa proq_standalone  -f $file -pi blastp  -pd $5 -pr $HOME/result/metahit_etienne/cleaned_pdb/ -j $HOME/soft/psipred/ -r $output_dir2  -k $HOME/soft/procheck/ $HOME/soft/ProQv1.2/ -q max -n 100 -nb 3  -t $CPU &> $output_dir2/log_modeller.txt
        else
             echo "Already done on : $output_dir2"
        fi
