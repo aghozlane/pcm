@@ -859,7 +859,8 @@ def get_pdb_sequence(pdb_file, seqdict):
                         chain = line[21:22]
                     if newchain != chain:
                         break
-                    pdb_seq += seqdict[aa]
+                    if aa in seqdict:
+                        pdb_seq += seqdict[aa]
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
     except TypeError:
@@ -2055,7 +2056,7 @@ def write_distances(results, pdb_file, pdb_distances_list):
 
 
 def compute_distance_variation(pdb_distances_list, default_distances_dict):
-    """Compute distance 
+    """Compute distance
     """
     distance_variation = []
     try:
@@ -2287,7 +2288,7 @@ def main():
                  args.results + "dope_per_model_{0}.svg".format(sessionid))
     if(args.structure_check and os.path.isfile(summary_file)
        and "check" in args.list_operations):
-        if(not args.psipred and "proq" in args.structure_check 
+        if(not args.psipred and "proq" in args.structure_check
            or "proq_standalone" in args.structure_check):
             print("It is recommanded to provide the secondary structure "
                   "prediction using psipred to use ProQ.")
