@@ -861,10 +861,13 @@ def get_pdb_sequence(pdb_file, seqdict):
                         break
                     if aa in seqdict:
                         pdb_seq += seqdict[aa]
+            assert(len(pdb_seq) > 0)
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
     except TypeError:
         print("Unknown residue \"{0}\" :{1}{2}".format(aa, os.linesep, line))
+    except AssertionError:
+        sys.exit("Bad extraction of the pdb, the first chain must be the chain A")
     return pdb_seq
 
 
@@ -1688,8 +1691,9 @@ def run_prosa(website_path, pdb, results):
                            .split("</span>")[0])
             path_hrplot = req.text.split("<a href='upload/")[1].split(
                                                                 "' alt='")[0]
-            path_eplot = req.text.split("<img src='upload/")[2].split(
-                                                                "' alt='")[0]
+            #Warning file cannot be dowloaded anymore
+            #path_eplot = req.text.split("<img src='upload/")[2].split(
+                                                                #"' alt='")[0]
         else:
             sys.exit("No data received from verify3D")
     except ValueError:
