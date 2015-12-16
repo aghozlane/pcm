@@ -49,5 +49,4 @@ done
 # Get reference ?
 
 # run alignment
-script=$HOME
-$script/PDBRMSD/PDBRMSD.py -q $candidate_dir/ -t $2/ -s TMalign mammoth  -p $script/soft/tmscore/ $script/soft/mammoth_compila/ -r $3/ -b 1
+python $HOME/PDBRMSD/PDBRMSD.py -q $candidate_dir/ -t $2/ -s TMalign mammoth  -p $HOME/PDBRMSD/soft/ $HOME/PDBRMSD/soft/mammoth_compila/ -r $3/ -b 1
