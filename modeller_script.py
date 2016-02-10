@@ -1691,9 +1691,14 @@ def run_prosa(website_path, pdb, results):
                            .split("</span>")[0])
             path_hrplot = req.text.split("<a href='upload/")[1].split(
                                                                 "' alt='")[0]
+<<<<<<< HEAD
+            #path_eplot = req.text.split("<img src='upload/")[2].split(
+            #                                                    "' alt='")[0]
+=======
             #Warning file cannot be dowloaded anymore
             #path_eplot = req.text.split("<img src='upload/")[2].split(
                                                                 #"' alt='")[0]
+>>>>>>> 1ead758eafd9ef0e837a92e1a1b59d4edeaa9d2f
         else:
             sys.exit("No data received from verify3D")
     except ValueError:
@@ -1703,10 +1708,10 @@ def run_prosa(website_path, pdb, results):
         save_picture(website_path + "upload/" + path_hrplot,
                      results + "prosa_hrplot_" +
                      ".".join(os.path.basename(pdb).split(".")[:-1]) + ".png")
-    if(path_eplot):
-        save_picture(website_path + "upload/" + path_eplot,
-                     results + "prosa_eplot_" +
-                     ".".join(os.path.basename(pdb).split(".")[:-1]) + ".png")
+    #if(path_eplot):
+    #    save_picture(website_path + "upload/" + path_eplot,
+    #                 results + "prosa_eplot_" +
+    #                 ".".join(os.path.basename(pdb).split(".")[:-1]) + ".png")
     return [pdb, zscore]
 
 
