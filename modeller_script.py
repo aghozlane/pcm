@@ -1691,14 +1691,9 @@ def run_prosa(website_path, pdb, results):
                            .split("</span>")[0])
             path_hrplot = req.text.split("<a href='upload/")[1].split(
                                                                 "' alt='")[0]
-<<<<<<< HEAD
-            #path_eplot = req.text.split("<img src='upload/")[2].split(
-            #                                                    "' alt='")[0]
-=======
             #Warning file cannot be dowloaded anymore
             #path_eplot = req.text.split("<img src='upload/")[2].split(
                                                                 #"' alt='")[0]
->>>>>>> 1ead758eafd9ef0e837a92e1a1b59d4edeaa9d2f
         else:
             sys.exit("No data received from verify3D")
     except ValueError:
