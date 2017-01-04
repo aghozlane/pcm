@@ -17,7 +17,7 @@ fi
 # Check if ref and tneg dir exist
 if [ ! -d "$1/ref" ] || [ ! -d "$1/tneg" ]
 then
-    error "$1/ref or $1/tneg doesn't exist"    
+    error "$1/ref or $1/tneg doesn't exist"
 fi
 
 datasets=($1/ref $1/tneg)
@@ -63,16 +63,14 @@ do
             fi
             if [  -f  "$prosa"  ]
             then 
-               best_model=$(tail -n +2 $summary |head -1 |cut -s -f1|sed -e  's/\r//g')
+               best_model=$(tail -n +2 $summary |head -1 |cut -s -f1|sed -e  's/\r//g'|sed 's/\.pdb//g')
                dope=$(tail -n +2 $summary |head -1 |cut -s -f3|sed -e  's/\r//g')
                molpdf=$(tail -n +2 $summary |head -1 |cut -s -f2|sed -e  's/\r//g')
                normalized_dope=$(tail -n +2 $summary |head -1 |cut -s -f4|sed -e  's/\r//g')
                GA341_score=$(tail -n +2 $summary |head -1 |cut -s -f5|sed -e  's/\r//g')
-
                zscore=$(tail -n +2 $prosa |head -1 |awk '{print $2}'|sed -e  's/\r//g'  )
                maxsub=$(tail -n +2 $proq |head -1 |awk '{print $2}'| sed -e  's/\r//g' )
                lgscore=$(tail -n +2 $proq |head -1 |awk '{print $3}'| sed -e  's/\r//g')
-            
                echo -e "$best_model\t$molpdf\t$dope\t$normalized_dope\t$GA341_score\t$zscore\t$maxsub\t$lgscore"
             fi
         else

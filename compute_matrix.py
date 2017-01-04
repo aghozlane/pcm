@@ -75,10 +75,11 @@ def load_data(gene_res, data_file, tag_type):
             data_reader.next()
             for line in data_reader:
                 gene = line[0].split(".")[0]
+                pdb_id = line[0].split(".")[1]
                 if gene in gene_res:
-                    gene_res[gene].update({tag_type:line[1:]})
+                    gene_res[gene].update({tag_type:line[1:], "pdb_id_"+tag_type:pdb_id})
                 else:
-                    gene_res[gene] = {tag_type:line[1:]}
+                    gene_res[gene] = {tag_type:line[1:], "pdb_id_"+tag_type:pdb_id}
     except IOError:
         sys.exit("Error cannot open {0}".format(data_file))
     return gene_res
@@ -96,7 +97,8 @@ def write_result(gene_res, name, output_file):
     try:
         with open(output_file, "wt") as output:
             output_writer = csv.writer(output, delimiter="\t")
-            output_writer.writerow(["Sequence", "Type", "d_molpdf",
+            output_writer.writerow(["Sequence", "Type", "pdb_id_ref",
+                                    "pdb_id_tneg", "d_molpdf",
                                     "d_dope_score", "d_normalized_dope",
                                     "d_GA341_score", "d_zscore", "d_maxsub",
                                     "d_lgscore", "d_Z-score_mammoth",
@@ -116,6 +118,21 @@ def write_result(gene_res, name, output_file):
                                     "RMSD_TMalign_tneg",
                                     "TM-score_TMalign_tneg"])
             for gene in gene_res:
+                # ugly but necessary
+                if "pdb_id_quality_ref" in gene_res[gene]:
+                    if "pdb_id_alignment_ref_mammoth" in gene_res[gene]:
+                        assert(gene_res[gene]["pdb_id_quality_ref"] == gene_res[gene]["pdb_id_alignment_ref_mammoth"])
+                    if "pdb_id_alignment_ref_TMalign" in gene_res[gene]:
+                        assert(gene_res[gene]["pdb_id_quality_ref"] == gene_res[gene]["pdb_id_alignment_ref_TMalign"])
+                if "pdb_id_quality_neg" in gene_res[gene]:
+                    if "pdb_id_alignment_neg_mammoth" in gene_res[gene]:
+                        assert(gene_res[gene]["pdb_id_quality_neg"] == gene_res[gene]["pdb_id_alignment_neg_mammoth"])
+                    if "pdb_id_alignment_neg_TMalign" in gene_res[gene]:
+                        assert(gene_res[gene]["pdb_id_quality_neg"] == gene_res[gene]["pdb_id_alignment_neg_TMalign"])
+                if not "pdb_id_quality_ref" in gene_res[gene]:
+                    gene_res[gene]["pdb_id_quality_ref"] = "nan"
+                if not "pdb_id_quality_neg" in gene_res[gene]:
+                    gene_res[gene]["pdb_id_quality_neg"] = "nan"
                 if not "quality_ref" in gene_res[gene]:
                     gene_res[gene]["quality_ref"] = [0] * 7
                 if not "quality_neg" in gene_res[gene]:
@@ -134,7 +151,9 @@ def write_result(gene_res, name, output_file):
                                             gene_res[gene]["alignment_neg_mammoth"][1:])
                 diff_TMalign = differential(gene_res[gene]["alignment_ref_TMalign"][1:],
                                             gene_res[gene]["alignment_neg_TMalign"][1:])
-                output_writer.writerow([gene, "Candidate_" + name] + 
+                output_writer.writerow([gene,  "Candidate_" + name, 
+                                        gene_res[gene]["pdb_id_quality_ref"],
+                                        gene_res[gene]["pdb_id_quality_neg"]] + 
                                        diff_quality + diff_mammoth + 
                                        diff_TMalign +
                                        gene_res[gene]["quality_ref"] +
@@ -145,6 +164,8 @@ def write_result(gene_res, name, output_file):
                                        gene_res[gene]["alignment_neg_TMalign"][1:])
     except IOError:
         sys.exit("Error cannot open {0}".format(output_file))
+    except AssertionError:
+        sys.exit("Error it is not the pdb_id between quality and alignment for ref or net")
 
 
 def main():
