@@ -130,9 +130,19 @@ def write_result(gene_res, name, output_file):
                     if "pdb_id_alignment_neg_TMalign" in gene_res[gene]:
                         assert(gene_res[gene]["pdb_id_quality_neg"] == gene_res[gene]["pdb_id_alignment_neg_TMalign"])
                 if not "pdb_id_quality_ref" in gene_res[gene]:
-                    gene_res[gene]["pdb_id_quality_ref"] = "nan"
+                    if "pdb_id_alignment_ref_mammoth" in gene_res[gene]:
+                        gene_res[gene]["pdb_id_quality_ref"] = gene_res[gene]["pdb_id_alignment_ref_mammoth"]
+                    elif "pdb_id_alignment_ref_TMalign" in gene_res[gene]:
+                        gene_res[gene]["pdb_id_quality_ref"] = gene_res[gene]["pdb_id_alignment_ref_TMalign"]
+                    else:
+                        gene_res[gene]["pdb_id_quality_ref"] = "nan"
                 if not "pdb_id_quality_neg" in gene_res[gene]:
-                    gene_res[gene]["pdb_id_quality_neg"] = "nan"
+                    if "pdb_id_alignment_neg_mammoth" in gene_res[gene]:
+                        gene_res[gene]["pdb_id_quality_neg"] = gene_res[gene]["pdb_id_alignment_neg_mammoth"]
+                    elif "pdb_id_alignment_neg_TMalign" in gene_res[gene]:
+                        gene_res[gene]["pdb_id_quality_neg"] = gene_res[gene]["pdb_id_alignment_neg_TMalign"]
+                    else:
+                        gene_res[gene]["pdb_id_quality_neg"] = "nan"
                 if not "quality_ref" in gene_res[gene]:
                     gene_res[gene]["quality_ref"] = [0] * 7
                 if not "quality_neg" in gene_res[gene]:

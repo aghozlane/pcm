@@ -55,7 +55,8 @@ do
             then
                 echo "PROSA file is missing for $i, start to re-run modeller_script" >&2
                 echo "$summary">&2
-                $modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k $HOME/soft/ProQv1.2/   1>&2  # 2> $rep/log_check.txt  
+                echo "$modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k $HOME/library/ProQv1.2/"
+                $modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k $HOME/library/ProQv1.2/   1>&2  # 2> $rep/log_check.txt  
                 prosa=$(ls -1 $rep/result_prosa_*.txt  2>/dev/null |head -1)
                 proq=$(ls -1 $rep/result_proq_*.txt  2>/dev/null |head -1)
                 horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )

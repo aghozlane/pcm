@@ -246,7 +246,9 @@ print(levels(lab))
 type_prot=c(levels(lab))
 levels(lab)=c("-1","1")
 ## Herre
-blaref_dd=blaref[,c(4,6:12)]
+#blaref_dd=blaref[,c(3,6:12)]
+#blaref_dd=blaref[,c(6:12,14,25)]
+blaref_dd=blaref[,c(13:34)]
 #blaref_dd=blaref[,c(5,7:13)]
 #rownames(blaref_dd) = blaref[,1]
 rownames(blaref_dd) = rownames(blaref)
@@ -316,10 +318,12 @@ write.table(result_prediction, file=x[5], sep="\t")
 #     ## Herre
 #     #blacandidate_dd=blacandidate[,c(4,6:12)]
 #     blacandidate_dd=blacandidate[,c(5,7:13)]
-blacandidate_dd = data_candidates[,c(4,6:12)]
+#blacandidate_dd = data_candidates[,c(3,6:12)]
+#blacandidate_dd = data_candidates[,c(6:12,14,25)]
+blacandidate_dd = data_candidates[,c(13:34)]
     #predict pour le model i
     res_predict=vector("list",nboot)
-    result_prediction=matrix(0, dim(blacandidate_dd)[1], 2)
+    result_prediction=matrix(0, dim(blacandidate_dd)[1], 3)
     for(b in 1:nboot) {
         res_predict[[b]]=lapply(res[[b]]$model,function(x) {predict(x, blacandidate_dd, prob=TRUE)})
         for (pred in res_predict[[b]]){
@@ -336,14 +340,18 @@ blacandidate_dd = data_candidates[,c(4,6:12)]
 
 
     for (i in seq(1, dim(blacandidate_dd)[1])){
-        result_prediction[i, 1] = 100.0 * result_prediction[i, 1] / (10.0 * nboot)
-        result_prediction[i, 2] = 100.0 * result_prediction[i, 2] / (10.0 * nboot)
+        result_prediction[i, 3] = prop.test(result_prediction[i, 1], 10 * nboot, p=0.5, alternative='greater')$p.value
+        result_prediction[i, 1] = round(100.0 * result_prediction[i, 1] / (10.0 * nboot),1)
+        result_prediction[i, 2] = round(100.0 * result_prediction[i, 2] / (10.0 * nboot),1)
     }
+    
+    #correction 
+    result_prediction[i, 3] = p.adjust(result_prediction[i, 3],method="BH")
     #print(blacandidate)
     ##Herre
     rownames(result_prediction) = rownames(blacandidate_dd)
     #rownames(result_prediction) = blacandidate[,1]
-    colnames(result_prediction) = type_prot
+    colnames(result_prediction) = c(type_prot, paste("Adjusted p.value",type_prot[1]))
     #print(cbind(blacandidate[,1], result_prediction))
     #write.table(result_prediction, file=paste(x[6],dtyp,".txt",sep="") , sep="\t")
     write.table(result_prediction, file=paste(x[6], sep="") , sep="\t")
