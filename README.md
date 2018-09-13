@@ -16,13 +16,13 @@ PCM is a generic method using homology modelling to increase the specificity of 
 when they are distantly related from proteins for which a function is known. The principle of PCM is to
 build structural models and assess their relevance using a specific training approach. PCM uses the
 list of sequences of reference proteins from a given family, the structures related to this family (they
-will be used as structural templates in the PDB format) and a series of negative references 
+will be used as structural templates in the PDB format) and a series of negative references
 <img src="www/Workflow.png" align="center" />
 
 
 ## Installation
 
-PCM is deployed using [singularity](https://singularity.lbl.gov/) and nextflow. 
+PCM is deployed using [singularity](https://singularity.lbl.gov/) and nextflow.
 To install singularity on a Linux platform, follow these commands:
 ```
 VERSION=2.5.2
@@ -43,7 +43,7 @@ Install nextflow:
 curl -s https://get.nextflow.io | bash
 ```
 
-## Running PCM on a proteome 
+## Running PCM on a proteome
 
 For this example we will search resistance genes in the proteome of the following species:
 <img src="example/phylogeny.png" align="center" />
@@ -51,12 +51,12 @@ This set was obtained from NCBI. The computation can be performed with the follo
 ```
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img
 ```
-Nextflow uses configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config). 
+Nextflow uses configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config).
 This file enable with the profile singularity the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
 
 ## Dependencies
 
-*  __Blastp__  
+*  __Blastp__
   Search of distant homologous for the candidate sequence.
    _Altschul, S.F., Gish, W., Miller, W., Myers, E.W. & Lipman, D.J. "Basic local alignment search tool." J. Mol. Biol., 1990, 215:403-410._
 * __Clustal 0mega__
