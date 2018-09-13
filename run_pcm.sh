@@ -15,9 +15,10 @@ header="""#!/bin/bash
 #$ -S /bin/bash
 #$ -M amine.ghozlane@pasteur.fr
 ##$ -m bea
+#$ -p hubbioit
 #$ -q hubbioit
 #$ -pe thread $CPU
-#$ -l mem_total=30G
+#$ -l mem_total=10G
 ### LIBRARY
 
 export PYTHONPATH=$HOME/soft/python-lib/lib/python2.7/site-packages/requests-2.3.0-py2.7.egg:$HOME/bin/modeller9.15/modlib/:$HOME/bin/modeller9.15/lib/x86_64-intel8/python2.5

@@ -44,9 +44,7 @@ do
 done
 
 
-# Select reference ?
 
-# Get reference ?
-
-# run alignment
-python $HOME/PDBRMSD/PDBRMSD.py -q $candidate_dir/ -t $2/ -s TMalign mammoth  -p $HOME/PDBRMSD/soft/ $HOME/PDBRMSD/soft/mammoth_compila/ -r $3/ -b 1
+PDBRMSD="$(dirname "${BASH_SOURCE[0]}")/../PDBRMSD.py"
+# run alignment"
+python $PDBRMSD -q $candidate_dir/ -t $2/ -s TMalign mammoth  -p "$(dirname "${BASH_SOURCE[0]}")/../soft/" "$(dirname "${BASH_SOURCE[0]}")/../soft/" -r $3/ -b 1

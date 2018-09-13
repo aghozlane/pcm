@@ -39,7 +39,7 @@ do
     echo "Ecriture du fichier : ${results[$i]}"
     echo -e "Model\tmolpdf\tdope_score\tnormalized_dope\tGA341_score\tzscore\tmaxsub\tlgscore"  > ${results[$i]}
     for rep in $(ls -d ${datasets[$i]}/*/)
-    do 
+    do
         #find "$rep" -name "modeller_summary_*.csv" |head -1
         summary=$(ls -1 $rep/modeller_summary_*.csv  2>/dev/null |head -1)
         #summary=$(find "$rep" -name "modeller_summary_*.csv" |head -1)
@@ -55,15 +55,14 @@ do
             then
                 echo "PROSA file is missing for $i, start to re-run modeller_script" >&2
                 echo "$summary">&2
-                echo "$modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k $HOME/library/ProQv1.2/"
-                $modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k $HOME/library/ProQv1.2/   1>&2  # 2> $rep/log_check.txt  
+                $modeller -s proq_standalone prosa -l check -sm $summary -d $horiz -k  $HOME/soft/ProQv1.2/   1>&2  # 2> $rep/log_check.txt
                 prosa=$(ls -1 $rep/result_prosa_*.txt  2>/dev/null |head -1)
                 proq=$(ls -1 $rep/result_proq_*.txt  2>/dev/null |head -1)
                 horiz=$(ls -1 $rep/*.horiz  2>/dev/null |head -1 )
                 echo "done..." >&2
             fi
             if [  -f  "$prosa"  ]
-            then 
+            then
                best_model=$(tail -n +2 $summary |head -1 |cut -s -f1|sed -e  's/\r//g'|sed 's/\.pdb//g')
                dope=$(tail -n +2 $summary |head -1 |cut -s -f3|sed -e  's/\r//g')
                molpdf=$(tail -n +2 $summary |head -1 |cut -s -f2|sed -e  's/\r//g')
