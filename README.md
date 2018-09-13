@@ -6,6 +6,8 @@
 
 - [Introduction](#introduction)
 - [Installation](#installation)
+- [Running PCM](#running pcm)
+- [Dependencies](#dependencies)
 - [Citation](#citation)
 - [Contact](#contact)
 
@@ -33,17 +35,16 @@ cd singularity-$VERSION
 make
 sudo make install
 ```
-Download PCM singularity image (warning: the file is heavy > 16GO):
+Download PCM singularity image (warning: the file is heavy ~ 19Go):
 ```
-wget ftp://shiny01.hosting.pasteur.fr/pub/pcm.img.tar.gz
-tar -zxf pcm.img.tar.gz
+wget ftp://shiny01.hosting.pasteur.fr/pub/pcm.img
 ```
 Install nextflow:
 ```
 curl -s https://get.nextflow.io | bash
 ```
 
-## Running PCM on a proteome
+## Running PCM
 
 For this example we will search resistance genes in the proteome of the following species:
 <img src="example/phylogeny.png" align="center" />
