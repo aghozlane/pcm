@@ -6,7 +6,7 @@
 
 - [Introduction](#introduction)
 - [Installation](#installation)
-- [Running PCM](#running pcm)
+- [Running PCM](#running-pcm)
 - [Dependencies](#dependencies)
 - [Citation](#citation)
 - [Contact](#contact)
