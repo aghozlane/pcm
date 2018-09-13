@@ -18,8 +18,9 @@ PCM is a generic method using homology modelling to increase the specificity of 
 when they are distantly related from proteins for which a function is known. The principle of PCM is to
 build structural models and assess their relevance using a specific training approach. PCM uses the
 list of sequences of reference proteins from a given family, the structures related to this family (they
-will be used as structural templates in the PDB format) and a series of negative references
-<img src="www/Workflow.png" align="center" />
+will be used as structural templates in the PDB format) and a series of negative references.
+The pcm process follow this dag:
+<img src="flowchart.png" align="center" />
 
 
 ## Installation
