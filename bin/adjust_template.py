@@ -20,6 +20,7 @@ import argparse
 import glob
 import csv
 import urllib2
+import string
 
 __author__ = "Amine Ghozlane"
 __copyright__ = "Copyright 2014, INRA"
@@ -57,8 +58,11 @@ def get_arguments():
                         help="List of pdb files or codes.")
     parser.add_argument('-d', dest='pdb_dir', type=str, nargs='+',
                         help="Directory that contains PDB files.")
+    parser.add_argument('-c', dest='chain_int', type=str, default="A",
+                        help="Indicate a chain of interest for extraction "
+                        "activity (default chain A).")
     parser.add_argument("-a", dest="activity", type=str, default="clean",
-                        choices=["renum", "sequence", "clean"],
+                        choices=["renum", "sequence", "extract", "clean"],
                         help="Select one operation : renum: to renumerotate the"
                         "pdb file, sequence: get the amino-acid sequence or "
                         "clean: renumerotate and on select ATOM.")
@@ -72,6 +76,9 @@ def get_numstring(val, maxval):
     """
     strval = str(val)
     strval_len = len(strval)
+    print("STRING VAL")
+    print(strval)
+    print(strval_len)
     if(strval_len < maxval):
         missing = maxval - strval_len
         strval = " " * missing + strval
@@ -84,8 +91,11 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
     """
     """
     res = 0
+    all_possibilities = string.ascii_uppercase + string.digits
+    print(all_possibilities)
     # num = start_position - 1
     num = 0
+    num_chain = -1
     aa_prev = ""
     chain_prev = ""
     try:
@@ -99,6 +109,7 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
                 if chain != chain_prev and field == "ATOM":
                     num = int(newres) - 1
                     chain_prev = chain
+                    num_chain += 1 
                 if((newres != res or aa != aa_prev) and field == "ATOM"):
                     aa_prev = aa
                     res = newres
@@ -108,26 +119,32 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
                         #sys.stdout.write(seqdict[aa])
                 pdb_line = list(line)
                 if(field == "ATOM"):
+                    # Check the residue number
                     pdb_line[22:26] = get_numstring(num, 4)
                     if pdb_line[16] != " ":
                         if pdb_line[16] == "A":
                             pdb_line[16] = " "
                         else:
                             do_not_print = True
+                    # Check the chain 
+                    assert(num_chain<36)
+                    pdb_line[21] = all_possibilities[num_chain]
                 pdb_line = "".join(pdb_line)
                 if not do_not_print:
                     if activity == "renum":
                         print(pdb_line, file=out, end="")
-                    elif activity == "clean" and field == "ATOM":
+                    elif (activity == "clean" or activity == "extract") and field == "ATOM":
                         #print(pdb_line, file=out, end="")
                         out_str += pdb_line
                     #sys.stdout.write(pdb_line)
                 # print(line[23:26])
-            if activity != "clean":
+            if activity != "clean" and activity != "extract":
                 print(os.linesep, file=out, end="")
             #sys.stdout.write("\n")
     except IOError:
         sys.exit("Error cannot open {0}".format(pdb_file))
+    except AssertionError:
+        sys.exit("Error in chain renumeration. There is more than 36 chains it's strange")
     return out_str
 
 
@@ -231,6 +248,23 @@ def set_chain_A(out_str, chain_types, out):
             print(line, file=out, end="\n")
 
 
+def extract_chain(out_str, chain_int, out):
+    """Extract a chain
+    """
+    extraction_done = False
+    try:
+        for line in out_str.split('\n'):
+            #print(line)
+            chain = line[21:22]
+            #print(chain)
+            if chain == chain_int:
+                print(line, file=out, end="\n")
+                extraction_done = True
+        assert(extraction_done)
+    except AssertionError:
+        sys.exit("Chain {} not found in the PDB".format(chain_int))
+
+
 def main():
     """
     """
@@ -269,6 +303,8 @@ def main():
             toremove.append(pdb)
         pdb_name = ".".join(os.path.basename(pdb).split(".")[:-1])
         output_file = args.output_dir + os.sep + pdb_name + output_type
+        if args.activity == "extract":
+            output_file = args.output_dir + os.sep + pdb_name + "_" + args.chain_int + output_type
         try:
             with open(output_file, "wt") as out:
                 if args.activity == "sequence":
@@ -280,6 +316,8 @@ def main():
                         print(out_str, file=out)
                     else:
                         set_chain_A(out_str, chain_types, out)
+                elif args.activity == "extract":
+                    extract_chain(out_str, args.chain_int, out)
         except IOError:
             sys.exit("Error cannot open {0}".format(output_file))
     for temp_pdb in toremove:

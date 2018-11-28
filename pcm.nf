@@ -63,7 +63,7 @@ def usage() {
     println("pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>")
     println("--in Multifasta file containing protein sequence (default ${params.in}).")
     println("--out Output directory (default ${params.out}). ")
-    println("--cpus Number of cpus for process (default ${params.cpus})")
+    println("--cpu Number of cpus for process (default ${params.cpu})")
 }
 
 

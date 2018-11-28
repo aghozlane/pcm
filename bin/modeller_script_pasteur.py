@@ -167,7 +167,7 @@ class ModelingConfig:
                         "-n_core %proc")
         self.config.add_section('Secondary_structure_config')
         self.config.set('Secondary_structure_config', 'psipred',
-                        "%path_softrunpsipred %fasta")
+                        "%path_softrunpsipred %fasta %proc")
         # -mode 3dcoffee -template_file %pdb
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
@@ -435,6 +435,7 @@ def identify_template(conf_data, multifasta_file, thread, pdb_identification,
         output = (results + pdb_identification[i] + "_"
                   + ".".join(os.path.basename(multifasta_file).split(".")[:-1])
                   + "_output.txt")
+        print(output)
         run_command(replace_motif(conf_data.hdict[pdb_identification[i]],
                                   list_path[i], multifasta_file,
                                   "", output, thread, "", "",
@@ -517,7 +518,8 @@ def get_pdb(conf_data, pdb_list, pdb_repository, results):
             pdb_codes += [os.path.basename(pdb).split(".")[0]]
             # If None, put empty string
             if pdb_repository:
-                cleaned_pdb = pdb_repository +  "pdb" + pdb.lower() + ".ent"
+                cleaned_pdb = pdb_repository +  pdb + ".pdb"
+                print(cleaned_pdb)
                 if os.path.isfile(cleaned_pdb):
                     pdb_files += [cleaned_pdb]
                 else:
@@ -566,11 +568,7 @@ def replace_motif(build_command, path_soft, multifasta_file, pdb_files,
         build_command = build_command.replace('%path_soft', path_soft)
     else:
         build_command = build_command.replace('%path_soft', "")
-
-    if thread:
-        build_command = build_command.replace('%proc', str(thread))
-    else:
-        build_command = build_command.replace('%proc', str(mp.cpu_count()))
+    build_command = build_command.replace('%proc', str(thread))
     build_command = build_command.replace('%multifasta', multifasta_file)
     try:
         if(len(pdb_files) > 0):
@@ -2146,6 +2144,7 @@ def main():
     # Prepare modeling
     if ("profile" in args.list_operations or "model" in args.list_operations
         and args.pdb):
+        print(args.pdb_repository)
         pdb_codes, pdb_files = get_pdb(conf_data, args.pdb,
                                        args.pdb_repository, args.results)
     # Compute alignment
