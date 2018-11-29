@@ -51,6 +51,8 @@ For this example we will search resistance genes in the proteome of the followin
 <img src="example/phylogeny.png" align="center" />
 This set was obtained from NCBI. The computation can be performed with the following command:
 ```
+git clone https://github.com/aghozlane/pcm.git
+cd pcm
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img
 ```
 Nextflow uses configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config).
@@ -93,8 +95,8 @@ Robin, X., Turck, N., Hainard, A., Tiberti, N., Lisacek, F., Sanchez, J. C., & M
 ## Citation
 
 Please cite the following publication if you use PCM:
-Ruppé E.¹, Ghozlane A.¹, Tap J.¹ et al. (2018) Prediction of the intestinal resistome by a novel 3D-based method. Nature Microbiology.
-¹equally contributing authors.
+Ruppé E.¹, Ghozlane A.¹, Tap J.¹ et al. (2018) Prediction of the intestinal resistome by a novel 3D-based method. Nature Microbiology (Article available [here](https://www.nature.com/articles/s41564-018-0292-6)).  
+
 
 ## Contact
 
