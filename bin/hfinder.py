@@ -560,6 +560,9 @@ def get_unique_element(data_list):
     """
     return {}.fromkeys(data_list).keys()
 
+def difference(lst1, lst2):
+    return list(set(lst1)^set(lst2))
+
 
 def get_sequence_length(fasta_file, listhomology):
     """Get sequence length of homologous
@@ -583,12 +586,14 @@ def get_sequence_length(fasta_file, listhomology):
                     sequence += line.replace("\n", "").replace("\r", "")
             if interest:
                 sequence_length[header] = len(sequence)
+                interest = False
             assert(len(sequence_length.keys()) == len(listhomology))
     except IOError:
         sys.exit("Error cannot open {0}".format(fasta_file))
     except AssertionError:
         sys.exit("The length of every blast hit has not "
-                 "been found in {0}".format(fasta_file))
+                 "been found in {0}.\nMissing elements {1}"
+                 .format(fasta_file, difference(sequence_length.keys(), listhomology)))
     return sequence_length
 
 

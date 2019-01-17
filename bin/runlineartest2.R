@@ -251,7 +251,7 @@ levels(lab)=c("-1","1")
 #blaref_dd=blaref[,c(6:12,14,25)]
 #blaref_dd=blaref[,c(13:34)]
 blaref_dd=blaref[,c(3,6:12)]
-print(blaref_dd[1:2,])
+#print(blaref_dd[1:2,])
 #blaref_dd=blaref[,c(5,7:13)]
 #rownames(blaref_dd) = blaref[,1]
 rownames(blaref_dd) = rownames(blaref)
@@ -269,7 +269,6 @@ result_prediction=matrix(0, dim(blaref)[1], 3)
 ## Herre
 rownames(result_prediction) = rownames(blaref)
 #rownames(result_prediction) = blaref[,1]
-print(rownames(result_prediction))
 for(b in 1:nboot) {
         for (i in seq(1, dim(blaref_dd)[1])){
 
@@ -368,8 +367,8 @@ write.table(result_prediction, file=x[5], sep="\t", quote=FALSE, row.names=FALSE
 #         result_prediction[i, 1] = round(100.0 * result_prediction[i, 1] / (10.0 * nboot),1)
 #         result_prediction[i, 2] = round(100.0 * result_prediction[i, 2] / (10.0 * nboot),1)
 #     }
-    
-#     #correction 
+
+#     #correction
 #     result_prediction[i, 3] = p.adjust(result_prediction[i, 3],method="BH")
 #     #print(blacandidate)
 #     ##Herre
@@ -386,16 +385,16 @@ write.table(result_prediction, file=x[5], sep="\t", quote=FALSE, row.names=FALSE
 total_pred = c()
 for(dtyp in unique(data_candidates$Type)){
 #     ##Herre
-      print(dtyp)
+    print(dtyp)
 #     #blacandidate=bla[bla$Type=="Candidate",]
-     blacandidate=data_candidates[data_candidates$Type==dtyp,]
+    blacandidate=data_candidates[data_candidates$Type==dtyp,]
 #     ## Herre
 #     #blacandidate_dd=blacandidate[,c(4,6:12)]
 #     blacandidate_dd=blacandidate[,c(5,7:13)]
     tm_scores = blacandidate[,c("TM.score_TMalign_ref", "TM.score_TMalign_tneg")]
     blacandidate_dd = blacandidate[,colnames(blaref_dd)]
     colnames(blacandidate_dd) = colnames(blaref_dd)
-    #rownames(blacandidate_dd) = blacandidate[,"Sequence"]
+    rownames(blacandidate_dd) = blacandidate[,"Sequence"]
     #print(rownames(blacandidate_dd))
     #predict pour le model i
     res_predict=vector("list",nboot)
@@ -413,18 +412,20 @@ for(dtyp in unique(data_candidates$Type)){
             }
         }
     }
-    # print("WHAT THE FUCK")
     # print(res_predict[[b]])
     for (i in seq(1, dim(blacandidate_dd)[1])){
         result_prediction[i, 3] = prop.test(result_prediction[i, 1], (10.0 *nboot), p=0.5, alternative='greater')$p.value
         result_prediction[i, 1] = 100.0 * result_prediction[i, 1] / (10.0 * nboot)
         result_prediction[i, 2] = 100.0 * result_prediction[i, 2] / (10.0 * nboot)
-        
+
     }
     result_prediction[, 3] = p.adjust(result_prediction[, 3],method="BH")
     result_prediction = cbind(result_prediction, tm_scores)
     quality_pred = matrix(paste("Not_a_", type_prot[1], sep=""),  dim(blacandidate)[1], 1)
     for (i in seq(1, dim(result_prediction)[1])){
+      #print(i)
+      if(is.nan(result_prediction[i,5])) result_prediction[i,5] = 0
+      if(is.nan(result_prediction[i,5])) result_prediction[i,4] = 0
       if (result_prediction[i,3] <= 0.5 && result_prediction[i,4] > result_prediction[i,5] && result_prediction[i,4] >= 0.9){
         quality_pred[i] = paste("Very_likely_", type_prot[1], sep="")
       }

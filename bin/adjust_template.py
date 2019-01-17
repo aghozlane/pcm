@@ -63,7 +63,7 @@ def get_arguments():
                         "activity (default chain A).")
     parser.add_argument("-a", dest="activity", type=str, default="clean",
                         choices=["renum", "sequence", "extract", "clean"],
-                        help="Select one operation : renum: to renumerotate the"
+                        help="Select one operation : renum: to renum the "
                         "pdb file, sequence: get the amino-acid sequence or "
                         "clean: renumerotate and on select ATOM.")
     parser.add_argument('-o', dest='output_dir', type=str, required=True,
@@ -76,9 +76,6 @@ def get_numstring(val, maxval):
     """
     strval = str(val)
     strval_len = len(strval)
-    print("STRING VAL")
-    print(strval)
-    print(strval_len)
     if(strval_len < maxval):
         missing = maxval - strval_len
         strval = " " * missing + strval
@@ -92,7 +89,6 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
     """
     res = 0
     all_possibilities = string.ascii_uppercase + string.digits
-    print(all_possibilities)
     # num = start_position - 1
     num = 0
     num_chain = -1
