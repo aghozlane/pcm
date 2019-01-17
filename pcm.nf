@@ -78,28 +78,28 @@ multifastaChannel = Channel
 
 familyChannel = Channel
                  .from(
-                    // ["aac2", "142", "236", "${params.database}/aac2/aac2_ref.faa", "${params.database}/aac2/aac2.hmm"],
-                    // ["aac3_1", "122", "203","${params.database}/aac3_1/aac3_1_ref.faa","${params.database}/aac3_1/aac3_1.hmm"],
-                    // ["aac3_2", "205", "341","${params.database}/aac3_2/aac3_2_ref.faa","${params.database}/aac3_2/aac3_2.hmm"],
-                    // ["aac6", "123", "205","${params.database}/aac6/aac6_ref.faa","${params.database}/aac6/aac6.hmm"],
-                    // ["ant", "194", "323","${params.database}/ant/ant_ref.faa","${params.database}/ant/ant.hmm"],
-                    // ["aph", "206", "344","${params.database}/aph/aph_ref.faa","${params.database}/aph/aph.hmm"],
-                    // ["arnm", "190", "316","${params.database}/arnm/arnm_ref.faa","${params.database}/arnm/arnm.hmm"],
-                    // ["blaa", "219", "365","${params.database}/blaa/blaa_ref.faa","${params.database}/blaa/blaa.hmm"],
-                    // ["blab1", "191", "318","${params.database}/blab1/blab1_ref.faa","${params.database}/blab1/blab1.hmm"],
-                    // ["blab3", "215", "359","${params.database}/blab3/blab3_ref.faa","${params.database}/blab3/blab3.hmm"],
-                    // ["blac", "290", "483","${params.database}/blac/blac_ref.faa","${params.database}/blac/blac.hmm"],
-                    // ["blad", "203", "338","${params.database}/blad/blad_ref.faa","${params.database}/blad/blad.hmm"],
-                    // ["dfra", "114", "236","${params.database}/dfra/dfra_ref.faa","${params.database}/dfra/dfra.hmm"],
-                    // ["erm", "203", "338","${params.database}/erm/erm_ref.faa","${params.database}/erm/erm.hmm"],
-                    // ["fos", "105", "175","${params.database}/fos/fos_ref.faa","${params.database}/fos/fos.hmm"],
+                    ["aac2", "142", "236", "${params.database}/aac2/aac2_ref.faa", "${params.database}/aac2/aac2.hmm"],
+                    ["aac3_1", "122", "203","${params.database}/aac3_1/aac3_1_ref.faa","${params.database}/aac3_1/aac3_1.hmm"],
+                    ["aac3_2", "205", "341","${params.database}/aac3_2/aac3_2_ref.faa","${params.database}/aac3_2/aac3_2.hmm"],
+                    ["aac6", "123", "205","${params.database}/aac6/aac6_ref.faa","${params.database}/aac6/aac6.hmm"],
+                    ["ant", "194", "323","${params.database}/ant/ant_ref.faa","${params.database}/ant/ant.hmm"],
+                    ["aph", "206", "344","${params.database}/aph/aph_ref.faa","${params.database}/aph/aph.hmm"],
+                    ["arnm", "190", "316","${params.database}/arnm/arnm_ref.faa","${params.database}/arnm/arnm.hmm"],
+                    ["blaa", "219", "365","${params.database}/blaa/blaa_ref.faa","${params.database}/blaa/blaa.hmm"],
+                    ["blab1", "191", "318","${params.database}/blab1/blab1_ref.faa","${params.database}/blab1/blab1.hmm"],
+                    ["blab3", "215", "359","${params.database}/blab3/blab3_ref.faa","${params.database}/blab3/blab3.hmm"],
+                    ["blac", "290", "483","${params.database}/blac/blac_ref.faa","${params.database}/blac/blac.hmm"],
+                    ["blad", "203", "338","${params.database}/blad/blad_ref.faa","${params.database}/blad/blad.hmm"],
+                    ["dfra", "114", "236","${params.database}/dfra/dfra_ref.faa","${params.database}/dfra/dfra.hmm"],
+                    ["erm", "203", "338","${params.database}/erm/erm_ref.faa","${params.database}/erm/erm.hmm"],
+                    ["fos", "105", "175","${params.database}/fos/fos_ref.faa","${params.database}/fos/fos.hmm"],
                     ["ldt", "257", "429","${params.database}/ldt/ldt_ref.faa","${params.database}/ldt/ldt.hmm"],
-                    ["mcr", "172", "578","${params.database}/mcr/mcr_ref.faa","${params.database}/mcr/mcr.hmm"]
-                    // ["qnr", "164", "274","${params.database}/qnr/qnr_ref.faa","${params.database}/qnr/qnr.hmm"],
-                    // ["sul", "209", "349","${params.database}/sul/sul_ref.faa","${params.database}/sul/sul.hmm"],
-                    // ["tetM", "475", "791","${params.database}/tetM/tetM_ref.faa","${params.database}/tetM/tetM.hmm"],
-                    // ["tetX", "287", "478","${params.database}/tetX/tetX_ref.faa","${params.database}/tetX/tetX.hmm"],
-                    // ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"]
+                    ["mcr", "172", "578","${params.database}/mcr/mcr_ref.faa","${params.database}/mcr/mcr.hmm"],
+                    ["qnr", "164", "274","${params.database}/qnr/qnr_ref.faa","${params.database}/qnr/qnr.hmm"],
+                    ["sul", "209", "349","${params.database}/sul/sul_ref.faa","${params.database}/sul/sul.hmm"],
+                    ["tetM", "475", "791","${params.database}/tetM/tetM_ref.faa","${params.database}/tetM/tetM.hmm"],
+                    ["tetX", "287", "478","${params.database}/tetX/tetX_ref.faa","${params.database}/tetX/tetX.hmm"],
+                    ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"]
                     )
 
 // index
