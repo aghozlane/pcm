@@ -75,7 +75,7 @@ The ID is >name (without any space).
 
 ### Singularity
 
-The usage of singularity with Nextflow requires that the space where the input data/result/work directory to be accessible in the virtual image. If you do not set your calculation in your home folder, you might need to explain to nextflow where it can mount this space, like here:
+The usage of singularity with Nextflow requires that the input data/result/work to be accessible in the virtual image. If you do not set your calculation in your home folder, you might need to explain to nextflow where it can mount this space, like here:
 ```
 #nextflow config file 
 singularity {                                                                    
@@ -94,8 +94,8 @@ More information about nextflow and singularity are available [here](https://www
 
 ### Cluster configuration
 
-Nextflow uses configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config). 
-This file enable with the profile singularity the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
+Nextflow uses a configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config). 
+This file enables the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
 ```
 # The profile singularity correspond to an execution on a cluster environment
 profiles{
@@ -113,7 +113,7 @@ profiles{
 # You can then provide this configuration like this:
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img -c nextflow_global.config -profile singularity
 ```
-In the profile singularity profile, I indicate where is the container with  process.container. I mount data directory with singularity.runOptions (the path are here indicatives). I selected the type of scheduler with executor and our cluster option here the qos and the partition for slurm will hubbioit.
+In the profile singularity, I indicate where is the container (with process.container). I mount data directory with singularity.runOptions (the path are here indicatives). I select the type of scheduler (with executor) and our cluster option: the qos and the partition for hubbioit.
 
 ## Results
 
