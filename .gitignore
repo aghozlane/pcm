@@ -4,3 +4,13 @@
 *~
 old
 work
+bin/compute_matrix_old.py
+.nextflow/
+img
+database
+modelingconfig.cfg
+run_*
+soft
+test
+runlineartest.R
+test_cmd_sing.txt
