@@ -7,6 +7,7 @@
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Running PCM](#running-pcm)
+- [Results](#results)
 - [Dependencies](#dependencies)
 - [Citation](#citation)
 - [Contact](#contact)
@@ -47,16 +48,96 @@ curl -s https://get.nextflow.io | bash
 
 ## Running PCM
 
+### Start
+
 For this example we will search resistance genes in the proteome of the following species:
 <img src="example/phylogeny.png" align="center" />
 This set was obtained from NCBI. The computation can be performed with the following command:
 ```
 git clone https://github.com/aghozlane/pcm.git
 cd pcm
+# See help with
+nextflow pcm.nf --help
+# Run example calculation
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img
 ```
-Nextflow uses configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config).
-This file enable with the profile singularity the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
+
+The fasta file must be in the following format:
+```
+>ID1
+MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
+FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
+>ID2
+MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
+FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
+```
+The ID is >name (without any space).
+
+### Singularity
+
+The usage of singularity with Nextflow requires that the input data/result/work to be accessible in the virtual image. If you do not set your calculation in your home folder, you might need to explain to nextflow where it can mount this space, like here:
+```
+#nextflow config file 
+singularity {                                                                    
+            enabled = true                                                       
+            autoMounts = false                                                   
+            runOptions = '--bind  /mnt:/home'                                     
+}
+# the directory /mnt that contains my data is mounted in the singularity 
+# on its home directory
+
+# Do not run
+# You can then provide this configuration like this:
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img -c nextflow.config
+```
+More information about nextflow and singularity are available [here](https://www.nextflow.io/docs/latest/singularity.html)
+
+### Cluster configuration
+
+Nextflow uses a configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config). 
+This file enables the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
+```
+# The profile singularity correspond to an execution on a cluster environment
+profiles{
+    singularity {
+        process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm.img'
+        singularity.enabled = true
+        singularity.autoMounts = false
+        singularity.runOptions = "-B /pasteur:/pasteur -B /local:/local -H ~/:/mnt"
+        process.executor = 'slurm'
+        process.clusterOptions='--qos=hubbioit'
+        process.queue = 'hubbioit'
+    }
+}
+# Do not run
+# You can then provide this configuration like this:
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img -c nextflow_global.config -profile singularity
+```
+In the profile singularity, I indicate where is the container (with process.container). I mount data directory with singularity.runOptions (the path are here indicatives). I select the type of scheduler (with executor) and our cluster option: the qos and the partition for hubbioit.
+
+## Results
+
+PCM results are available as following:
+
+File | Directory | Description
+---|---|---
+**pcm_result.tsv** | main directory | This table gives all the score obtained during modelisation with reference and negative reference modelling. This file is provided to our classifier to determine if the candidate is more a reference or a negative reference.
+**prediction_output.tsv** | main directory | This table is the result of the classification of each candidates. It provides the pvalue associated to the score to be a potential reference and the estimated quality of the prediction.
+**ref_output.tsv** | main directory |  This table is the result of the classification for the universal model sequence (same as prediction_output.tsv).
+**reference_output.pdf** | main directory | This pdf shows the roc curve and weight associated to each score during the learning phase of machine learning. It uses an "universal model" (/usr/local/bin/database/universal_model.csv) that contains the score that we obtained for know ARD and know "not ARD".
+**_candidates.fasta** | candidates | This fasta file  gives the selected hit from blast/ssearch/hmmer and length criterion for one ARD family
+**_candidates_hit_length.tsv** | candidates | It indicates which hit meet the length criterion 
+**_candidates_hit_properties** | candidates | It regroups all the information of blast/ssearch/hmmer and clustalo alignments for each candidates (Identity,Similarity, coverage)
+**candidates_by_ref.tsv** | modelling | This table gives the results obtained for candidates modelled with a reference template in the following order: molpdf,	dope_score, normalized_dope,	GA341_score,	zscore,	maxsub_ref,	lgscore
+**candidates_by_tneg.tsv** | modelling | This table gives the results obtained for candidates modelled with a negative reference template (same as ref models)
+**mammoth_by_ref.tsv** | modelling | This table gives of the structural alignment results with the reference templates using Mammoth (candidate ard_type, PDB_reference,	zscore_mammoth,	TM-score_mammoth)
+**mammoth_by_tneg.tsv** | modelling | This table gives the structural alignment results with the negative reference templates using Mammoth (same as mammoth by ref)
+**TMalign_by_ref.tsv** | modelling | This table gives of the structural alignment results with the reference templates using TMalign (candidate ard_type,	PDB_reference,	RMSD_TMalign,	TM-score_TMalign)
+**TMalign_by_tneg.tsv** | modelling | This table gives the structural alignment results with the negative reference templates using TMalign (same as TMalign by ref)
+**best_model_ref** | modelling/*_candidates/ | This directory provide the best model obtained for one given candidate using a reference template
+**best_model_tneg** | modelling/*_candidates/ | This directory provide the best model obtained for one given candidate using a negative reference template
+
+The other files correspond to intermediate results.
 
 ## Dependencies
 
