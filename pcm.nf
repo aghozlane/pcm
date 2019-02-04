@@ -41,7 +41,6 @@ params.cleaned_pdb = "${params.database}/cleaned_pdb/"
 params.proq = "/usr/local/bin/"
 //params.psipred = "$HOME/soft/psipred/"
 params.psipred = "/usr/local/bin/"
-params.internet_access = "no"
 params.modelling_quality = "fast"
 params.num_model = 6
 params.num_template = 3
@@ -51,6 +50,9 @@ params.number_bootstrap = 10
 params.tmalign_dir = "/usr/local/bin/"
 //params.mammoth_dir = "${baseDir}/soft/"
 params.mammoth_dir = "/usr/local/bin/"
+params.family = "aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van"
+filter = params.family
+tab = filter.tokenize( ',' )
 
 myDir = file(params.out)
 myDir.mkdirs()
@@ -64,8 +66,13 @@ def usage() {
     println("--in Multifasta file containing protein sequence (default ${params.in}).")
     println("--out Output directory (default ${params.out}). ")
     println("--cpu Number of cpus for process (default ${params.cpu})")
+    println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)")
+    println("--hfinder_evalue E-value threshold to search candidates (default ${params.hfinder_evalue})")
+    println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
+    println("--num_model Number of model calculated (default ${params.num_model})")
+    println("--num_template Number of template used during modelling (default ${params.num_template})")
+    println("--number_bootstrap Number of bootstrap calculated during statistical analysis (default ${params.number_bootstrap})")
 }
-
 
 if(params.help){
     usage()
@@ -101,9 +108,12 @@ familyChannel = Channel
                     ["tetX", "287", "478","${params.database}/tetX/tetX_ref.faa","${params.database}/tetX/tetX.hmm"],
                     ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"]
                     )
+                 .filter{ it[0] in tab}
 
 // index
 process index_query {
+    tag "${fasta.baseName}"
+
     input:
     file(fasta) from multifastaChannel
 
@@ -157,103 +167,73 @@ process fastaExtract {
     """
 }
 
+process homology_modelling {
+    tag "${fasta.baseName}:${fam}"
+    publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
+    cpus params.cpu
+    label 'modelling'
+    validExitStatus 0,3
+
+    input:
+    set fam, file(fasta) from fastaChannel
+
+    output:
+    set fam, file(fasta), file("*.horiz"), file("best_model_ref/*.pdb"), file("ref/*/result_proq_*"), file("ref/*/modeller_summary_*.csv"), file("best_model_tneg/*.pdb"), file("tneg/*/result_proq_*"), file("tneg/*/modeller_summary_*.csv") optional true into modelChannel
+    file("*/*/*.svg") into imgChannel
+    file("*/*/*.pdb") into allPDBChannel
 
 
-//if  internet access on nodes or not
-if ( params.internet_access == "no") {
-    process homology_modelling {
-        tag "${fasta.baseName}:${fam}"
-        publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
-        cpus params.cpu
-        label 'modelling'
-        validExitStatus 0,3
-
-        input:
-        set fam, file(fasta) from fastaChannel
-
-        output:
-        set fam, file(fasta), file("*.horiz"), file("best_model_ref/*.pdb"), file("ref/*/result_proq_*"), file("ref/*/modeller_summary_*.csv"), file("best_model_tneg/*.pdb"), file("tneg/*/result_proq_*"), file("tneg/*/modeller_summary_*.csv") optional true into modelChannel
-        file("*/*/*.svg") into imgChannel
-        file("*/*/*.pdb") into allPDBChannel
-
-
-        shell:
-        """
-        !{params.psipred}/runpsipred !{fasta} !{params.cpu}
-        mkdir -p ref/!{fasta.baseName}/ best_model_ref/ tneg/!{fasta.baseName}/ best_model_tneg/
-        # ref
-        modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
-        # tneg
-        modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
-        # Get the best model for ref
-        summary_ref=\$(ls -1 ref/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
-        # Check ref file
-        if [ -f "\$summary_ref" ]
-        then
-            cp ref/!{fasta.baseName}//\$(sed -n 2p \$summary_ref |cut -f 1) best_model_ref/
-        else
-            echo "\$summary_ref file is missing"
-        fi
-        # Get the best model for tneg
-        summary_tneg=\$(ls -1 tneg/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
-        # Check tneg file
-        if [ -f "\$summary_tneg" ]
-        then
-            cp tneg/!{fasta.baseName}//\$(sed -n 2p \$summary_tneg |cut -f 1) best_model_tneg/
-        else
-            echo "\$summary_tneg file is missing"
-        fi
-        """
-    }
-
-    // modelChannel.subscribe{ println it }
-
-    process prosa_check {
-         tag "${fasta.baseName}:${fam}"
-         publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
-         label 'modelling'
-         errorStrategy 'retry'
-
-         input:
-         set val(fam), file(fasta), horiz, best_pdb_ref, proq_ref, summary_ref, best_pdb_tneg, proq_tneg, summary_tneg from modelChannel
-
-         output:
-         set val(fam), file(fasta), best_pdb_ref, proq_ref, file("ref/*/result_prosa_*"), summary_ref, best_pdb_tneg, proq_tneg, file("tneg/*/result_prosa_*"), summary_tneg into extractChannel
-         set val(fam), file(fasta), best_pdb_ref, best_pdb_tneg into structuralAlignmentChannel
-
-         shell:
-         """
-         mkdir -p ref/!{fasta.baseName}/ tneg/!{fasta.baseName}/
-         modeller_script_singularity.py -s prosa -l check -sm !{summary_ref} -d !{horiz}
-         modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz}
-         cp \$(dirname !{summary_ref})/result_prosa_* ref/!{fasta.baseName}/
-         cp \$(dirname !{summary_tneg})/result_prosa_* tneg/!{fasta.baseName}/
-         """
-    }
+    shell:
+    """
+    !{params.psipred}/runpsipred !{fasta} !{params.cpu}
+    mkdir -p ref/!{fasta.baseName}/ best_model_ref/ tneg/!{fasta.baseName}/ best_model_tneg/
+    # ref
+    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
+    # tneg
+    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
+    # Get the best model for ref
+    summary_ref=\$(ls -1 ref/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
+    # Check ref file
+    if [ -f "\$summary_ref" ]
+    then
+        cp ref/!{fasta.baseName}//\$(sed -n 2p \$summary_ref |cut -f 1) best_model_ref/
+    else
+        echo "\$summary_ref file is missing"
+    fi
+    # Get the best model for tneg
+    summary_tneg=\$(ls -1 tneg/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
+    # Check tneg file
+    if [ -f "\$summary_tneg" ]
+    then
+        cp tneg/!{fasta.baseName}//\$(sed -n 2p \$summary_tneg |cut -f 1) best_model_tneg/
+    else
+        echo "\$summary_tneg file is missing"
+    fi
+    """
 }
 
-// else{
-//     process compute_pcm_full {
-//         tag "${fasta.baseName}:${fam}"
-//         publishDir "$myDir/modelling/", mode: 'copy'
-//         cpus params.cpu
-//         label 'modelling'
+process prosa_check {
+     tag "${fasta.baseName}:${fam}"
+     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
+     label 'modelling'
+     errorStrategy 'retry'
 
-//         input:
-//         set fam, fasta from fastaChannel
+     input:
+     set val(fam), file(fasta), horiz, best_pdb_ref, proq_ref, summary_ref, best_pdb_tneg, proq_tneg, summary_tneg from modelChannel
 
-//         output:
-//         set file("ref/*/*.pdb"), file("ref/*/result_*"), file("ref/*/modeller_summary_*.csv"), file("ref/*/*.horiz") into refChannel
-//         set file("ref/*/*.png"), file("ref/*/*.svg") into imgChannel
+     output:
+     set val(fam), file(fasta), best_pdb_ref, proq_ref, file("ref/*/result_prosa_*"), summary_ref, best_pdb_tneg, proq_tneg, file("tneg/*/result_prosa_*"), summary_tneg into extractChannel
+     set val(fam), file(fasta), best_pdb_ref, best_pdb_tneg into structuralAlignmentChannel
 
-//         shell:
-//         """
-//         mkdir -p ref/!{fasta.baseName}/
-//         #cd ref/!{fasta.baseName}/
-//         modeller_script_singularity.py -l model check -s proq_standalone prosa -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -j !{params.psipred} -q max -n 100  -nb 3 -t !{params.cpu}  -pi blastp
-//         """
-//     }
-// }
+     shell:
+     """
+     mkdir -p ref/!{fasta.baseName}/ tneg/!{fasta.baseName}/
+     modeller_script_singularity.py -s prosa -l check -sm !{summary_ref} -d !{horiz}
+     modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz}
+     cp \$(dirname !{summary_ref})/result_prosa_* ref/!{fasta.baseName}/
+     cp \$(dirname !{summary_tneg})/result_prosa_* tneg/!{fasta.baseName}/
+     """
+}
 
 process extract_result {
      tag "${fasta.baseName}:${fam}"

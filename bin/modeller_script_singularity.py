@@ -412,11 +412,12 @@ def extract_elements(template_search_file, regex_text, order):
     except IOError:
         sys.exit("Error cannot open {0}".format(template_search_file))
     except ValueError:
-        sys.exit("Error cannot convert to interger "
+        sys.exit("Error cannot convert to integer "
                  "{0}".format(match.group(order[1])))
     except AssertionError:
-        sys.exit("No template have been identified in "
-                 "{0}".format(template_search_file))
+        print("No template have been identified in "
+                 "{0}".format(template_search_file), file=sys.stderr)
+        sys.exit(3)
     return elements
 
 
