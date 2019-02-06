@@ -325,7 +325,6 @@ tmalign_by_tneg.into { tmalign_by_tneg_tosave; tmalign_by_tneg_toprocess}
 tmalign_by_tneg_tosave.subscribe { it.copyTo(modDir) }
 
 process build_matrix {
-    publishDir "$myDir/", mode: 'copy'
 
     input:
     file(mamref) from mammoth_by_ref_toprocess
@@ -337,6 +336,7 @@ process build_matrix {
 
     output:
     file("pcm_result.tsv") into matrixChannel
+    file("pcm_result.tsv") into matrixoutChannel
 
     shell:
     """
@@ -345,13 +345,11 @@ process build_matrix {
 }
 
 process lineartest {
-    publishDir "$myDir/", mode: 'copy'
 
     input:
     file(matrix) from matrixChannel
 
     output:
-    file(matrix) into matrixoutChannel
     file("reference_output.pdf") into refpdfChannel
     file("ref_output.tsv") into refoutChannel
     file("prediction_output.tsv") into predoutChannel
