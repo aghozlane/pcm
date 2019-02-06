@@ -29,8 +29,8 @@ workflow.onError = {
 }
 
 // General parameters
-params.in = "${baseDir}/test/"
-params.out = "${baseDir}/test/res"
+params.in = "${baseDir}/example/example_proteome.faa"
+params.out = "${baseDir}/example/res"
 params.modelling = "${params.out}/modelling"
 params.cpu = 6
 //params.database = "${baseDir}/database/"
