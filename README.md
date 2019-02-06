@@ -73,6 +73,25 @@ FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
 ```
 The ID is >name (without any space).
 
+### Command line options
+
+
+```
+N E X T F L O W  ~  version 19.01.0
+Launching `/pasteur/projets/policy01/Matrix/metagenomics/pcm/pcm.nf` [determined_austin] - revision: fd473b9f0c
+pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>
+--in Multifasta file containing protein sequence (default /pasteur/projets/policy01/Matrix/metagenomics/pcm/example/example_proteome.faa).
+--out Output directory (default /pasteur/projets/policy01/Matrix/metagenomics/pcm/example/res). 
+--cpu Number of cpus for process (default 6)
+--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)
+--hfinder_evalue E-value threshold to search candidates (default 0.00001)
+--modelling_quality Level of quality of the homology modelling fast, normal or high (default fast)
+--model Number of model calculated (default 6)
+--template Number of template for modelling (default 3)
+--bootstrap Number of bootstrap calculated during statistical analysis (default 10)
+```
+
+
 ### Singularity
 
 The usage of singularity with Nextflow requires that the input data/result/work to be accessible in the virtual image. If you do not set your calculation in your home folder, you might need to explain to nextflow where it can mount this space, like here:
@@ -103,7 +122,7 @@ profiles{
         process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm.img'
         singularity.enabled = true
         singularity.autoMounts = false
-        singularity.runOptions = "-B /pasteur:/pasteur -B /local:/local -H ~/:/mnt"
+        singularity.runOptions = "-B /pasteur:/pasteur"
         process.executor = 'slurm'
         process.clusterOptions='--qos=hubbioit'
         process.queue = 'hubbioit'
@@ -114,6 +133,8 @@ profiles{
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img -c nextflow_global.config -profile singularity
 ```
 In the profile singularity, I indicate where is the container (with process.container). I mount data directory with singularity.runOptions (the path are here indicatives). I select the type of scheduler (with executor) and our cluster option: the qos and the partition for hubbioit.
+
+### Cluster configuration
 
 ## Results
 
