@@ -42,10 +42,10 @@ params.proq = "/usr/local/bin/"
 //params.psipred = "$HOME/soft/psipred/"
 params.psipred = "/usr/local/bin/"
 params.modelling_quality = "fast"
-params.num_model = 6
-params.num_template = 3
+params.model = 6
+params.template = 3
 params.hfinder_evalue = 1E-5
-params.number_bootstrap = 10
+params.bootstrap = 10
 //params.tmalign_dir = "${baseDir}/soft/"
 params.tmalign_dir = "/usr/local/bin/"
 //params.mammoth_dir = "${baseDir}/soft/"
@@ -53,6 +53,11 @@ params.mammoth_dir = "/usr/local/bin/"
 params.family = "aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van"
 filter = params.family
 tab = filter.tokenize( ',' )
+
+params.predout = "${params.out}/prediction_output.tsv"
+params.refout = "${params.out}/ref_output.tsv"
+params.matrixout = "${params.out}/pcm_result.tsv"
+params.refpdfout = "${params.out}/reference_output.pdf"
 
 myDir = file(params.out)
 myDir.mkdirs()
@@ -69,9 +74,9 @@ def usage() {
     println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)")
     println("--hfinder_evalue E-value threshold to search candidates (default ${params.hfinder_evalue})")
     println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
-    println("--num_model Number of model calculated (default ${params.num_model})")
-    println("--num_template Number of template used during modelling (default ${params.num_template})")
-    println("--number_bootstrap Number of bootstrap calculated during statistical analysis (default ${params.number_bootstrap})")
+    println("--model Number of model calculated (default ${params.model})")
+    println("--template Number of template for modelling (default ${params.template})")
+    println("--bootstrap Number of bootstrap calculated during statistical analysis (default ${params.bootstrap})")
 }
 
 if(params.help){
@@ -188,9 +193,9 @@ process homology_modelling {
     !{params.psipred}/runpsipred !{fasta} !{params.cpu}
     mkdir -p ref/!{fasta.baseName}/ best_model_ref/ tneg/!{fasta.baseName}/ best_model_tneg/
     # ref
-    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
+    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp
     # tneg
-    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.num_model}  -nb !{params.num_template} -t !{params.cpu}  -pi blastp
+    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp
     # Get the best model for ref
     summary_ref=\$(ls -1 ref/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
     # Check ref file
@@ -343,16 +348,24 @@ process lineartest {
     publishDir "$myDir/", mode: 'copy'
 
     input:
-    file(matrixChannel) from matrixChannel
+    file(matrix) from matrixChannel
 
     output:
-    set file("reference_output.pdf"), file("ref_output.tsv"), file("prediction_output.tsv") into resultChannel
+    file(matrix) into matrixoutChannel
+    file("reference_output.pdf") into refpdfChannel
+    file("ref_output.tsv") into refoutChannel
+    file("prediction_output.tsv") into predoutChannel
 
     shell:
     """
-    Rscript !{baseDir}/bin/runlineartest2.R !{matrixChannel} !{params.universal_model} !{params.number_bootstrap} reference_output.pdf ref_output.tsv prediction_output.tsv
+    Rscript !{baseDir}/bin/runlineartest2.R !{matrix} !{params.universal_model} !{params.bootstrap} reference_output.pdf ref_output.tsv prediction_output.tsv
     """
 }
+
+predoutChannel.subscribe { it.copyTo("${params.predout}") }
+refoutChannel.subscribe { it.copyTo("${params.refout}") }
+matrixoutChannel.subscribe { it.copyTo("${params.matrixout}") }
+refpdfChannel.subscribe { it.copyTo("${params.refpdfout}") }
 
 println "Project : $workflow.projectDir"
 println "Cmd line: $workflow.commandLine"
