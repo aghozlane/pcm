@@ -118,11 +118,11 @@ Select the quality level of the modelisation. A high level of modelling quality 
 
 Select the number of model to calculate for modelling step. The homology modelling is a heuristic approach where the starting point is crucial. A high number of model corresponds to a high number of different start possible. By default, the number of model is set to 6 which is enough to screen the set of possibilities.
 
-### Option --template
+#### Option --template
 
 Select the number of template to consider for modelling step. Setting this parameter higher makes the PCM more precise with a risk of overfitting. However some ARDs families do not have more than 3 ARD templates (notably MCR).
 
-### Option --bootstrap
+#### Option --bootstrap
 
 Select the number of bootstrap to calculate for candidate classification. Setting this higher makes the classification more precise with an increase of calculation time.
 
