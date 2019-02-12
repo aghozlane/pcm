@@ -5,6 +5,7 @@
 ## Contents
 
 - [Introduction](#introduction)
+- [Usage](#usage)
 - [Installation](#installation)
 - [Running PCM](#running-pcm)
 - [Results](#results)
@@ -23,6 +24,11 @@ will be used as structural templates in the PDB format) and a series of negative
 The pcm process follow this dag:
 <img src="flowchart.png" align="center" />
 
+
+## Usage
+
+PCM is available on [galaxy](galaxy.pasteur.fr) in section Microbiome_analysis/PCM.
+A tutorial is available [here](example/PCM_in_galaxy.pdf). This version is restrained to investigate a catalogue of 100,000 proteins.
 
 ## Installation
 
@@ -62,27 +68,18 @@ nextflow pcm.nf --help
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img
 ```
 
-The fasta file must be in the following format:
-```
->ID1
-MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
-FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
->ID2
-MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
-FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
-```
-The ID is >name (without any space).
 
 ### Command line options
 
 
 ```
 N E X T F L O W  ~  version 19.01.0
-Launching `/pasteur/projets/policy01/Matrix/metagenomics/pcm/pcm.nf` [determined_austin] - revision: fd473b9f0c
+Launching `pcm.nf` [happy_blackwell] - revision: b2185a98ff
 pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>
---in Multifasta file containing protein sequence (default /pasteur/projets/policy01/Matrix/metagenomics/pcm/example/example_proteome.faa).
---out Output directory (default /pasteur/projets/policy01/Matrix/metagenomics/pcm/example/res). 
---cpu Number of cpus for process (default 6)
+--in Multifasta file containing protein sequence (default /pasteur/homes/aghozlan/pcm/example/example_proteome.faa).
+--out Output directory (default /pasteur/homes/aghozlan/pcm/example/res). 
+--cpu Number of cpus for homology modeling processing (default 6)
+--cpu_candidates Number of cpus for candidates search (default 12)
 --family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)
 --hfinder_evalue E-value threshold to search candidates (default 0.00001)
 --modelling_quality Level of quality of the homology modelling fast, normal or high (default fast)
@@ -91,6 +88,43 @@ pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>
 --bootstrap Number of bootstrap calculated during statistical analysis (default 10)
 ```
 
+#### Option --in
+
+PCM takes as input a fasta file containing protein sequence. They must follow this next format:
+```
+>ID1
+MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
+FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
+>ID2
+MNTFGQIHNNMPYLFLLAFIMNFYDQFNNSISGQEMCYEVESI
+FNNHQVDIIGAPAAAFKPLELQKGLGTKGAIVNYPILQVTGNI
+```
+The ID is >name (without any space or point in the name).
+
+#### Option --family
+
+One or several ARD families can be investigated. User must indicate the selected family as follow: --family family1,family2. By default, PCM allows to screen the ARD families of clinical interest. All current possibilities are indicated here: aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van
+
+#### Option --hfinder_evalue
+
+Set the E-value threshold for candidate selection. This threshold impacts the candidates selection. A high e-value will select more candidates for PCM.
+
+
+#### Option --modelling_quality
+
+Select the quality level of the modelisation. A high level of modelling quality will make PCM to spend more time to improve the protein model. By default, the mode fast is enough to predict an ARD.
+
+#### Option --modelling_quality
+
+Select the number of model to calculate for modelling step. The homology modelling is a heuristic approach where the starting point is crucial. A high number of model corresponds to a high number of different start possible. By default, the number of model is set to 6 which is enough to screen the set of possibilities.
+
+### Option --template
+
+Select the number of template to consider for modelling step. Setting this parameter higher makes the PCM more precise with a risk of overfitting. However some ARDs families do not have more than 3 ARD templates (notably MCR).
+
+### Option --bootstrap
+
+Select the number of bootstrap to calculate for candidate classification. Setting this higher makes the classification more precise with an increase of calculation time.
 
 ### Singularity
 

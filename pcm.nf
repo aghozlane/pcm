@@ -33,6 +33,7 @@ params.in = "${baseDir}/example/example_proteome.faa"
 params.out = "${baseDir}/example/res"
 params.modelling = "${params.out}/modelling"
 params.cpu = 6
+params.cpu_candidates = 12
 //params.database = "${baseDir}/database/"
 params.database = "/usr/local/bin/database/"
 params.universal_model = "${params.database}/universal_model.csv"
@@ -70,7 +71,8 @@ def usage() {
     println("pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>")
     println("--in Multifasta file containing protein sequence (default ${params.in}).")
     println("--out Output directory (default ${params.out}). ")
-    println("--cpu Number of cpus for process (default ${params.cpu})")
+    println("--cpu Number of cpus for homology modeling processing (default ${params.cpu})")
+    println("--cpu_candidates Number of cpus for candidates search (default ${params.cpu_candidates})")
     println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)")
     println("--hfinder_evalue E-value threshold to search candidates (default ${params.hfinder_evalue})")
     println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
@@ -134,7 +136,7 @@ process index_query {
 process search_distant_homologuous {
     tag "${fam[0]}"
     publishDir "$myDir/candidates/", mode: 'copy'
-    cpus params.cpu
+    cpus params.cpu_candidates
 
     input:
     set file(fasta), file(index) from multifastaindexedChannel
@@ -147,7 +149,7 @@ process search_distant_homologuous {
     shell:
     """
     mkdir !{fam[0]}_candidates/
-    hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu}
+    hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
     if [ -f "!{fam[0]}_candidates/all_protein_homology.fasta" ]
     then
         mv !{fam[0]}_candidates/all_protein_homology.fasta !{fam[0]}_candidates/!{fam[0]}_candidates.fasta
@@ -356,7 +358,7 @@ process lineartest {
 
     shell:
     """
-    Rscript !{baseDir}/bin/runlineartest2.R !{matrix} !{params.universal_model} !{params.bootstrap} reference_output.pdf ref_output.tsv prediction_output.tsv
+    runlineartest2.R !{matrix} !{params.universal_model} !{params.bootstrap} reference_output.pdf ref_output.tsv prediction_output.tsv
     """
 }
 

@@ -1,0 +1,82 @@
+<tool id="pcm" name="PCM" version="0.1" hidden="false">
+	<description></description>
+	
+        <edam_operations>
+            <edam_operation>operation_3460</edam_operation>
+        </edam_operations>
+	
+	<edam_topics>
+            <edam_topic>topic_0102</edam_topic>
+        </edam_topics>
+
+	<requirements>
+		<requirement type="package" version="1.8.0">java</requirement>
+		<requirement type="package" version="2.6.1">singularity</requirement>
+	</requirements>
+
+	<command>
+<![CDATA[
+bash $__tool_directory__/nextflow run $__tool_directory__/pcm.nf -profile common_singularity_galaxy -c $__tool_directory__/nextflow_global.config --in $input_fasta --modelling_quality $modelling_quality --hfinder_evalue $input_hfinder_threshold --model $input_num_model --template $input_num_template --bootstrap $input_number_bootstrap --matrixout $matrixouttsv --refout $refouttsv --predout $predouttsv --refpdfout $refpdfout --family $input_family --out ./ -with-singularity $__root_dir__/../singularity/pcm.img
+]]>
+	</command>
+
+	<stdio>
+		<exit_code range="0" level="warning" description="job finished" />
+		<exit_code range="1:"  level="fatal"   description="Fatal ERROR exit code greater than 1" />
+	</stdio>
+
+	<inputs>
+		<param format="fasta" name="input_fasta" type="data" label="Fasta file (protein sequence).">
+		<validator type="dataset_metadata_in_range" min="1" max="100000" metadata_name="sequences" message="The number of sequences in the fasta file must be comprised between 1 and 100000 sequences."/>
+		</param>
+		<param name="input_family" type="select" label="Select an ARD family to investigate" multiple="true" display="checkboxes" optional="false">
+		  <option value="arnm">16S rRNA methylase</option>
+		  <option value="aac2">AAC(2')</option>
+		  <option value="aac3_1">AAC(3)-I</option>
+		  <option value="aac3_2">AAC(3)-II</option>
+		  <option value="aac6">AAC(6')</option>
+		  <option value="ant">ANT</option>
+		  <option value="aph">APH</option>
+		  <option value="blaa">Class A beta-lactamase</option>
+		  <option value="blab1">Class B1 beta-lactamase</option>
+		  <option value="blab3">Class B3 beta-lactamase</option>
+		  <option value="blac">Class C beta-lactamase</option>
+		  <option value="blad">Class D beta-lactamase</option>
+		  <option value="dfra">DfrA</option>
+		  <option value="erm">Erm</option>
+		  <option value="fos">Fos</option>
+		  <option value="ldt">Ldt</option>
+		  <option value="mcr">MCR</option>
+		  <option value="qnr">Qnr</option>
+		  <option value="sul">Sul</option>
+		  <option value="tetM">Tet(M)</option>
+		  <option value="tetX">Tet(X)</option>
+		  <option value="van">Van ligase</option>
+		</param>
+		<param name="input_hfinder_threshold" type="float" min="1E-50" max="10" value="1E-5" label="E-value threshold for candidate selection" help="--hfinder_evalue; Set the e-value threshold to search candidates; Setting this higher selects more candidates for the PCM default=1E-5"/>
+		<param name="modelling_quality" type="select" label="Quality level of the modelisation" help="--modelling_quality; Set the modelling quality level; Setting this higher makes the PCM more precise with an increase of calculation time; default=fast"> 
+			<option value="fast" selected="true">Fast</option>
+			<option value="normal">Normal</option>
+			<option value="high">High</option>
+		</param>
+		<param name="input_num_model" type="integer" min="1" max="100" value="6" label="Number of model to calculate for modelling step" help="--model; Setting this higher makes the PCM more precise with an increase of calculation time; default=6"/>
+		<param name="input_num_template" type="integer" min="1" max="6" value="3" label="Number of template to consider for modelling step" help="--template; Setting this higher makes the PCM more precise with a risk of overfitting; default=3"/>
+		<param name="input_number_bootstrap" type="integer" min="1" max="100" value="10" label="Number of bootstrap to calculate for candidate classification" help="--bootstrap; Setting this higher makes the PCM more precise with an increase of calculation time; default=3"/>
+        
+	</inputs>
+	<outputs>
+	    <data format="tsv" name="matrixouttsv" label="Output pcm result file ${tool.name} on ${on_string}"/>
+	    <data format="tsv" name="refouttsv" label="Output reference result file ${tool.name} on ${on_string}"/>
+	    <data format="tsv" name="predouttsv" label="Output prediction output file ${tool.name} on ${on_string}"/>	    
+	    <data format="pdf" name="refpdfout" label="Output reference pdf output file ${tool.name} on ${on_string}"/>
+	</outputs>
+	<help>
+	PCM is a generic method using homology modelling to increase the specificity of functional prediction of proteins, especially when they are distantly related from proteins for which a function is known. The principle of PCM is to build structural models and assess their relevance using a specific training approach. PCM uses the list of sequences of reference proteins from a given family, the structures related to this family (they will be used as structural templates in the PDB format) and a series of negative references.
+	Please cite the following publication if you use PCM: Ruppé E., Ghozlane A., Tap J. et al. (2018) Prediction of the intestinal resistome by a novel 3D-based method. Nature Microbiology.
+	If you have any comments, questions or suggestions, or need help to use PCM, please contact the author (amine.ghozlane@pasteur.fr)
+	</help>
+	<citations>
+		<citation type="doi">10.1038/s41564-018-0292-6</citation>
+	</citations>
+</tool>
+
