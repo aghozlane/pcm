@@ -27,7 +27,7 @@ The pcm process follow this dag:
 
 ## Usage
 
-PCM is available on [galaxy](galaxy.pasteur.fr) in section Microbiome_analysis/PCM.
+PCM is available on [galaxy](https://galaxy.pasteur.fr/) in section Microbiome_analysis/PCM.
 A tutorial is available [here](example/PCM_in_galaxy.pdf). This version is restrained to investigate a catalogue of 100,000 proteins.
 
 ## Installation
@@ -143,7 +143,7 @@ singularity {
 # You can then provide this configuration like this:
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm.img -c nextflow.config
 ```
-More information about nextflow and singularity are available [here](https://www.nextflow.io/docs/latest/singularity.html)
+More information about nextflow and singularity are available [here](https://www.nextflow.io/docs/latest/singularity.html).
 
 ### Cluster configuration
 
