@@ -115,9 +115,9 @@ Set the E-value threshold for candidate selection. This threshold impacts the ca
 
 Select the quality level of the modelisation. A high level of modelling quality will make PCM to spend more time to improve the protein model. By default, the mode fast is enough to predict an ARD.
 
-#### Option --modelling_quality
+#### Option --model
 
-Select the number of model to calculate for modelling step. The homology modelling is a heuristic approach where the starting point is crucial. A high number of model corresponds to a high number of different start possible. By default, the number of model is set to 6 which is enough to screen the set of possibilities.
+Select the number of model to calculate for modelling step. The homology modelling is a heuristic approach where the starting point is crucial. A high number of model corresponds to a high number of different start. By default, the number of model is set to 6 which is enough to screen the set of possibilities.
 
 #### Option --template
 
@@ -149,7 +149,7 @@ More information about nextflow and singularity are available [here](https://www
 ### Cluster configuration
 
 Nextflow uses a configuration file to deploy computation on cluster, an example of this file is available [here](nextflow_global.config). 
-This file enables the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are the activated with the command (-profile singularity  -c nextflow_global.config).
+This file enables the usage of singularity on a slurm scheduler and need to be adjusted for each cluster configuration. Profiles are activated with the command (-profile singularity  -c nextflow_global.config).
 ```
 # The profile singularity correspond to an execution on a cluster environment
 profiles{
