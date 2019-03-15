@@ -43,6 +43,7 @@ cd singularity-$VERSION
 make
 sudo make install
 ```
+It is recommanded to install singularity as root. NEWUSER namespace runtime error can occur on Red Hat system when singularity is installer by an user (see  https://github.com/sylabs/singularity/issues/415).
 Download PCM singularity image (warning: the file is heavy ~ 19Go):
 ```
 wget ftp://shiny01.hosting.pasteur.fr/pub/pcm.img
