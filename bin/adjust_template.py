@@ -61,7 +61,7 @@ def get_arguments():
     parser.add_argument('-c', dest='chain_int', type=str, default="A",
                         help="Indicate a chain of interest for extraction "
                         "activity (default chain A).")
-    parser.add_argument("-a", dest="activity", type=str, default="clean",
+    parser.add_argument("-a", dest="activity", type=str,
                         choices=["renum", "sequence", "extract", "clean"],
                         help="Select one operation : renum: to renum the "
                         "pdb file, sequence: get the amino-acid sequence or "
@@ -117,14 +117,15 @@ def renum_pdb(pdb_file, activity, seqdict, out, out_str):
                 if(field == "ATOM"):
                     # Check the residue number
                     pdb_line[22:26] = get_numstring(num, 4)
-                    if pdb_line[16] != " ":
-                        if pdb_line[16] == "A":
-                            pdb_line[16] = " "
-                        else:
-                            do_not_print = True
+                    if activity != "extract":
+                        if pdb_line[16] != " ":
+                            if pdb_line[16] == "A":
+                                pdb_line[16] = " "
+                            else:
+                                do_not_print = True
+                        pdb_line[21] = all_possibilities[num_chain]
                     # Check the chain 
                     assert(num_chain<36)
-                    pdb_line[21] = all_possibilities[num_chain]
                 pdb_line = "".join(pdb_line)
                 if not do_not_print:
                     if activity == "renum":
@@ -250,15 +251,15 @@ def extract_chain(out_str, chain_int, out):
     extraction_done = False
     try:
         for line in out_str.split('\n'):
-            #print(line)
+            # print(line)
             chain = line[21:22]
-            #print(chain)
+            # print(chain)
             if chain == chain_int:
                 print(line, file=out, end="\n")
                 extraction_done = True
         assert(extraction_done)
     except AssertionError:
-        sys.exit("Chain {} not found in the PDB".format(chain_int))
+        print("Chain {} not found in the PDB".format(chain_int), file=sys.stderr)
 
 
 def main():
@@ -295,27 +296,33 @@ def main():
             if not os.path.isdir(temp_dir):
                 os.mkdir(temp_dir)
             # Download pdb file in temp directory
-            pdb = download_pdb(pdb, temp_dir)
-            toremove.append(pdb)
+            if args.activity == None:
+                pdb = download_pdb(pdb, args.output_dir)
+                #print(pdb)
+            else:
+                pdb = download_pdb(pdb, temp_dir)
+                toremove.append(pdb)
         pdb_name = ".".join(os.path.basename(pdb).split(".")[:-1])
         output_file = args.output_dir + os.sep + pdb_name + output_type
         if args.activity == "extract":
             output_file = args.output_dir + os.sep + pdb_name + "_" + args.chain_int + output_type
-        try:
-            with open(output_file, "wt") as out:
-                if args.activity == "sequence":
-                    print(">{0}".format(pdb_name), file=out)
-                out_str = renum_pdb(pdb, args.activity, seqdict, out, "")
-                if args.activity == "clean":
-                    chain_A_ok, chain_types = detect_chain_A(out_str)
-                    if chain_A_ok:
-                        print(out_str, file=out)
-                    else:
-                        set_chain_A(out_str, chain_types, out)
-                elif args.activity == "extract":
-                    extract_chain(out_str, args.chain_int, out)
-        except IOError:
-            sys.exit("Error cannot open {0}".format(output_file))
+        if args.activity:
+            try:
+                with open(output_file, "wt") as out:
+                    if args.activity == "sequence":
+                        print(">{0}".format(pdb_name), file=out)
+                    out_str = renum_pdb(pdb, args.activity, seqdict, out, "")
+                    if args.activity == "clean":
+                        chain_A_ok, chain_types = detect_chain_A(out_str)
+                        if chain_A_ok:
+                            print(out_str, file=out)
+                        else:
+                            set_chain_A(out_str, chain_types, out)
+                    elif args.activity == "extract":
+                        extract_chain(out_str, args.chain_int, out)
+            except IOError:
+                sys.exit("Error cannot open {0}".format(output_file))
+    #print(toremove)
     for temp_pdb in toremove:
         if os.path.isfile(temp_pdb):
             os.remove(temp_pdb)
