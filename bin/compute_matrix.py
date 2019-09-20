@@ -90,23 +90,19 @@ def load_data(gene_res, data_file, tag_type):
 def differential(ref, neg):
     """
     """
-    print("fait chier")
-    print(ref)
-    print(neg)
     assert(len(ref) == len(neg))
     res = []
     for i in xrange(len(ref)):
         refval = float(ref[i])
         negval = float(neg[i])
-        print(refval)
-        print(negval)
-        if isnan(negval):
+        if isnan(negval) and isnan(refval):
+            res += [0]
+        elif isnan(negval):
             res += [refval]
         elif isnan(refval):
             res += [negval]
         else:
             res += [refval - negval]
-    print(res)
     return res
 
 def write_result(gene_res, name, output_file):
@@ -217,13 +213,8 @@ def main():
     for i, data_file in enumerate(args.alignment_ref_file +
                                   args.alignment_neg_file):
         soft = os.path.basename(data_file).split("_")[0]
-        print(soft)
-        print(tag_type[i])
-        print(data_file)
-        print(i)
         gene_res = load_data(gene_res, data_file, "alignment_{0}_{1}"
                              .format(tag_type[i], soft))
-        print(gene_res)
         #print(gene_res)
     write_result(gene_res, args.name, args.output_file)
 

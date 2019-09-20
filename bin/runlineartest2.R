@@ -300,7 +300,7 @@ pdf(x[4])
     boxplot(w, las=2, horizontal=TRUE, xlab="% total model weight", main="feature weight")
     # Roc curve on the mean results of each bootstrap
     roc_data=roc(response=as.character(blaref$Type), predictor=result_prediction[,1], plot=TRUE,print.auc=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, auc.polygon.col="gray",  print.thres=TRUE,reuse.auc=FALSE, ci = TRUE, boot.n=2000)
-    temp=coords(roc_data, "b", ret=c("se","sp","t"), best.method="youden")
+    temp=coords(roc_data, "b", ret=c("se","sp","t"), best.method="youden", transpose=TRUE)
     #temp=coords(roc_data, "b", ret=c("se","sp","t"), best.method="closest.topleft",best.weights=c(0.1, 0.2)
     points(temp[2],temp[1],col="black",pch=16)
 dev.off()

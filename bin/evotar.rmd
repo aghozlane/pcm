@@ -1,0 +1,153 @@
+
+---
+title: "PCM: SVM classification"
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(corrplot)
+library(mlr)
+library(ggplot2)
+library(pROC)
+library(ggbiplot)
+library(pander)
+library(e1071)
+library(DT)
+knitr::opts_chunk$set(progress = TRUE)
+```
+PCM (new) classification model is based on SVM. It works as a two step process. We will first train our model on confirmed ARD/not ARD selected by Etienne Ruppé for which a set of 3D-structure modelisation have been prepared. 
+
+# 1 Learning stage data
+
+This dataset is called the discovery dataset and consists of two classes in the dataset with the following counts:
+```{r load, cache=TRUE, results='asis'}
+dat <- data.frame(x, y = y)
+pander::pandoc.table(table(y))
+```
+
+# 2 PCA
+
+The two first principal components show that the classification problem of PCM data is essentially linear.
+
+```{r pca}
+res.pca <- prcomp(x, center = TRUE, scale=TRUE)
+ggbiplot(res.pca, groups = y) + theme_bw()
+```
+
+Besides, the variables are very correlated.
+
+```{r corrplot}
+corrplot(cor(x), tl.col = "black")
+```
+
+# 3 Logistic model
+
+The logistic regression of discovery dataset shows different correlation between PCM variables and status Ref/Tneg.
+
+```{r logreg, warning=FALSE}
+fit <- glm(y ~ ., data = dat, family="binomial")
+summary(fit)
+```
+
+# 4 Support Vector Machine
+
+We chose for this classification problem to use a Support Vector Machine (with a linear kernel). In a nutshell, the method will estimate a separating hyperplane on the basis of a few keys individuals (the support vectors). The amount of support vectors that will be used is linked to the main parameter of this method: the so-called "cost". 
+
+The whole data-set is split into two parts:
+  - a discovery set that will be used first to estimate the optimal value of the cost with a 5-fold cross validation and second to estimate a classification model,
+  - a validation set that will be used to assess the performance of the SVM.
+
+```{r svm}
+tsk <- makeClassifTask(data = dat, target = "y")
+n <- getTaskSize(tsk)
+disco.set <- seq(1, n, by = 2)
+valid.set <- seq(2, n, by = 2)
+paramz <-
+  makeParamSet(makeNumericParam(
+    "cost",
+    lower = -2,
+    upper = 3,
+    trafo = function(x)
+      10 ^ x
+  ))
+ctrl <- makeTuneControlGrid()
+rdesc <- makeResampleDesc("CV", iters = 5L)
+```
+
+```{r hypertuning, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+res <- tuneParams(
+  "classif.svm",
+  task = tsk,
+  resampling = rdesc,
+  par.set = paramz,
+  control = ctrl
+)
+lrn <-
+  setHyperPars(makeLearner("classif.svm", predict.type = "prob"), par.vals = res$x)
+```
+
+The following ROC curve represents the performance of the estimated model on the validation set.
+
+```{r roc}
+mod <- train(lrn, tsk, subset = disco.set)
+task.pred <- predict(mod, task = tsk, subset = valid.set)
+roc <- generateThreshVsPerfData(task.pred, list(fpr, tpr))
+obj <- roc(task.pred$data$truth, task.pred$data$prob.R, ci=TRUE, plot=FALSE)
+plotROCCurves(roc) + theme_minimal() + coord_equal() + ggtitle(paste0("AUC's ", capture.output(obj$ci)))
+```
+
+The following barplot depicts the variable importance on the discovery set.
+
+```{r importance, cache=TRUE}
+tsk.disco <- makeClassifTask(data = dat, target = "y")
+featimp <- generateFeatureImportanceData(task = tsk.disco, learner = lrn)
+dat.imp <- data.frame(t(featimp$res))
+dat.imp$id <- row.names(dat.imp)
+ggplot(dat.imp, aes(reorder(id, mmce), mmce)) + geom_col(fill = "steelblue") + theme_bw() + coord_flip() + labs(x="", y="Variable importance")
+```
+
+
+
+# 5 Results
+
+We apply the model estimated on the discovery set to your dataset. The obtained classes are saved in a text file.
+
+```{r newdata}
+# Selection of PCM variables that will be used for classification
+xnew <- (pcm[, names(x)])
+# Perform prediction
+new.prd <- predict(mod, newdata = xnew)
+# Prepa
+prediction = as.data.frame(cbind(pcm[,c("Sequence","Type", "TM.score_TMalign_ref", "TM.score_TMalign_tneg")], new.prd$data))
+quality_pred = rep("Not_a_ref", dim(prediction)[1])
+for (i in seq(1, dim(prediction)[1])){
+  if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.9){
+    quality_pred[i] = "Very_likely_ref"
+  }
+  else if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.8){
+    quality_pred[i] = "Likely_ref"
+  }
+  else if (prediction[i,5] >= 0.5 && prediction[i,3] >= 0.5){
+    quality_pred[i] = "Fair_ref"
+  }
+}
+prediction = cbind(prediction, quality_pred)
+colnames(prediction)[8] = "Prediction"
+prediction[,c(3,4,5,6)] = round(prediction[,c(3,4,5,6)], 3)
+write.table(prediction, file = predout, sep ="\t")
+
+DT::datatable(prediction,options = list(pageLength=50, scrollX='400px'))
+```
+
+We represent the two first principal components of the new data, colored by their predicted class.
+
+```{r pcanew}
+res.pca_new <- prcomp(xnew, center=TRUE, scale=FALSE)
+ggbiplot(res.pca_new, choices =1:2, groups = new.prd$data$response) + theme_bw()
+```
+
+# 5 More about PCM
+
+A description of PCM method and of the different score can be found in [PCM paper](https://www.nature.com/articles/s41564-018-0292-6).   
+Please cite: Ruppé E.¹, Ghozlane A.¹, Tap J.¹ et al. (2018) Prediction of the intestinal resistome by a novel 3D-based method. Nature Microbiology. 
+

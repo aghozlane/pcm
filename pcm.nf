@@ -1,22 +1,5 @@
 #!/usr/bin/env nextflow
 
-/*workflow.onComplete {
-    def subject = 'Annot virus'
-    def recipient = 'amine.ghozlane@pasteur.fr'
-
-    ['mail', '-s', subject, recipient].execute() << """
-
-    Pipeline execution summary
-    ---------------------------
-    Completed at: ${workflow.complete}
-    Duration    : ${workflow.duration}
-    Success     : ${workflow.success}
-    workDir     : ${workflow.workDir}
-    exit status : ${workflow.exitStatus}
-    Error report: ${workflow.errorReport ?: '-'}
-    """
-}*/
-
 workflow.onComplete = {
     // any workflow property can be used here
     println "Pipeline complete"
@@ -29,6 +12,7 @@ workflow.onError = {
 }
 
 // General parameters
+params.evotarmd = "${baseDir}/bin/evotar.rmd"
 params.in = "${baseDir}/example/example_proteome.faa"
 params.out = "${baseDir}/example/res"
 params.modelling = "${params.out}/modelling"
@@ -56,9 +40,8 @@ filter = params.family
 tab = filter.tokenize( ',' )
 
 params.predout = "${params.out}/prediction_output.tsv"
-params.refout = "${params.out}/ref_output.tsv"
 params.matrixout = "${params.out}/pcm_result.tsv"
-params.refpdfout = "${params.out}/reference_output.pdf"
+params.predhtmlout = "${params.out}/result.html"
 
 myDir = file(params.out)
 myDir.mkdirs()
@@ -347,25 +330,31 @@ process build_matrix {
 }
 
 process lineartest {
+    cache false
 
     input:
     file(matrix) from matrixChannel
 
     output:
-    file("reference_output.pdf") into refpdfChannel
-    file("ref_output.tsv") into refoutChannel
+    file("result.html") into predhtmloutChannel
     file("prediction_output.tsv") into predoutChannel
 
     shell:
     """
-    runlineartest2.R !{matrix} !{params.universal_model} !{params.bootstrap} reference_output.pdf ref_output.tsv prediction_output.tsv
+#!/usr/bin/env Rscript
+library(rmarkdown)
+x <- read.csv2("!{params.universal_model}")[,c(3:4,6:13)]
+y <- read.csv2("!{params.universal_model}")[,2]
+pcm <- read.delim("!{matrix}")
+predout <- paste0(getwd(), "/prediction_output.tsv")
+rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout), 
+                  output_format="html_document")
     """
 }
 
+predhtmloutChannel.subscribe { it.copyTo("${params.predhtmlout}") }
 predoutChannel.subscribe { it.copyTo("${params.predout}") }
-refoutChannel.subscribe { it.copyTo("${params.refout}") }
 matrixoutChannel.subscribe { it.copyTo("${params.matrixout}") }
-refpdfChannel.subscribe { it.copyTo("${params.refpdfout}") }
 
 println "Project : $workflow.projectDir"
 println "Cmd line: $workflow.commandLine"
