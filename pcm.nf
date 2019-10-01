@@ -30,7 +30,6 @@ params.modelling_quality = "fast"
 params.model = 6
 params.template = 3
 params.hfinder_evalue = 1E-5
-params.bootstrap = 10
 //params.tmalign_dir = "${baseDir}/soft/"
 params.tmalign_dir = "/usr/local/bin/"
 //params.mammoth_dir = "${baseDir}/soft/"
@@ -61,7 +60,6 @@ def usage() {
     println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
     println("--model Number of model calculated (default ${params.model})")
     println("--template Number of template for modelling (default ${params.template})")
-    println("--bootstrap Number of bootstrap calculated during statistical analysis (default ${params.bootstrap})")
 }
 
 if(params.help){
