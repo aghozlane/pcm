@@ -44,9 +44,9 @@ make
 sudo make install
 ```
 It is recommanded to install singularity as root. NEWUSER namespace runtime error can occur on Red Hat system when singularity is installed by an user (see  https://github.com/sylabs/singularity/issues/415).
-Download PCM singularity image (warning: the file is heavy ~ 19Go):
+Download PCM singularity image (warning: the file is heavy ~ 1Go):
 ```
-wget ftp://shiny01.hosting.pasteur.fr/pub/pcm_201909.img
+wget ftp://shiny01.hosting.pasteur.fr/pub/pcm_202001.img
 ```
 Install nextflow:
 ```
@@ -154,7 +154,7 @@ This file enables the usage of singularity on a slurm scheduler and need to be a
 # The profile singularity correspond to an execution on a cluster environment
 profiles{
     singularity {
-        process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm_201909.img'
+        process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm_202001.img'
         singularity.enabled = true
         singularity.autoMounts = false
         singularity.runOptions = "-B /pasteur:/pasteur"
@@ -165,7 +165,7 @@ profiles{
 }
 # Do not run
 # You can then provide this configuration like this:
-nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_201909.img -c nextflow_global.config -profile singularity
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202001.img -c nextflow_global.config -profile singularity
 ```
 In the profile singularity, I indicate where is the container (with process.container). I mount data directory with singularity.runOptions (the path are here indicatives). I select the type of scheduler (with executor) and our cluster option: the qos and the partition for hubbioit.
 
