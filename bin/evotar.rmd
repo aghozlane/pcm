@@ -121,14 +121,19 @@ new.prd <- predict(mod, newdata = xnew)
 prediction = as.data.frame(cbind(pcm[,c("Sequence","Type", "TM.score_TMalign_ref", "TM.score_TMalign_tneg")], new.prd$data))
 quality_pred = rep("Not_a_ref", dim(prediction)[1])
 for (i in seq(1, dim(prediction)[1])){
-  if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.9){
-    quality_pred[i] = "Very_likely_ref"
+  if (is.nan(prediction[i,3]) ||  is.nan(prediction[i,4])){
+    quality_pred[i] = "Unknown"
   }
-  else if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.8){
-    quality_pred[i] = "Likely_ref"
-  }
-  else if (prediction[i,5] >= 0.5 && prediction[i,3] >= 0.5){
-    quality_pred[i] = "Fair_ref"
+  else{
+    if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.9){
+      quality_pred[i] = "Very_likely_ref"
+    }
+    else if (prediction[i,5] >= 0.5 && prediction[i,3] > prediction[i,4] && prediction[i,3] >= 0.8){
+      quality_pred[i] = "Likely_ref"
+    }
+    else if (prediction[i,5] >= 0.5 && prediction[i,3] >= 0.5){
+      quality_pred[i] = "Fair_ref"
+    }
   }
 }
 prediction = cbind(prediction, quality_pred)

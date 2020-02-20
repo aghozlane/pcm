@@ -28,12 +28,12 @@ import csv
 
 
 __author__ = "Amine Ghozlane"
-__copyright__ = "Copyright 2014, INRA"
+__copyright__ = "Copyright 2020, Institut Pasteur"
 __credits__ = ["Amine Ghozlane"]
 __license__ = "GPL"
 __version__ = "1.0.0"
 __maintainer__ = "Amine Ghozlane"
-__email__ = "amine.ghozlane@jouy.inra.fr"
+__email__ = "amine.ghozlane@pasteur.fr"
 __status__ = "Developpement"
 
 
@@ -46,7 +46,7 @@ class Inconfig:
             results: Result path
         """
         self.hdict = {}
-        self.inconfig_file = '{0}hconfig.cfg'.format(results)
+        self.inconfig_file = '{}{}hconfig.cfg'.format(results, os.sep)
         self.config = ConfigParser.RawConfigParser()
         if(config_file is not None):
             self.inconfig_file = config_file
@@ -77,6 +77,7 @@ class Inconfig:
         self.hdict["tblastn"] = self.config.get('Homology_config', 'tblastn')
         self.hdict["hmmsearch"] = self.config.get('Homology_config', 'hmmsearch')
         self.hdict["hmmscan"] = self.config.get('Homology_config', 'hmmscan')
+        self.hdict["mmseqs"] = self.config.get('Homology_config', 'mmseqs')
         self.hdict["clustalo"] = self.config.get('Alignment_config', 'clustalo')
 
 
@@ -114,6 +115,9 @@ class Inconfig:
         self.config.set('Homology_config', 'hmmscan', "%path_softhmmscan "
                         " --tblout %output --cpu %proc -E %e_value "
                         "%hmm_db %query > log_hmmscan.txt")
+        self.config.set('Homology_config', 'mmseqs', "%path_softmmseqs "
+                        "easy-search %query %database %output %temporary --threads %proc "
+                        " --search-type 1")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_softclustalo -i %multifasta -o %output "
@@ -174,7 +178,8 @@ def getArguments():
                         help='Path to the database file (blast).')
     parser.add_argument('-s', dest='software', type=str,
                         choices=["blastp", "tblastn", "blastx", "psiblast",
-                                 "jackhmmer", "ssearch", "hmmsearch", "hmmscan"],
+                                 "jackhmmer", "ssearch", "hmmsearch", "hmmscan",
+                                 "mmseqs"],
                         nargs='+', default=["blastp", "jackhmmer", "ssearch"],
                         help='Select protein homology software.')
     parser.add_argument('-p', dest='path_software', type=isdir,
@@ -189,6 +194,8 @@ def getArguments():
                         help='Number of best.')
     parser.add_argument('-t', dest='thread', type=int, default=mp.cpu_count(),
                         help='Number of thread.')
+    parser.add_argument('-tmp', dest='tmp', type=isdir, default="." + os.sep + "tmp",
+                        help='Temporary folder for mmseqs.')
     parser.add_argument('-b', dest='behavior', default=[],
                         choices=["force_computation", "extract",
                                  "cumulative", "check"],
@@ -244,7 +251,7 @@ def run_command(cmd):
 
 
 def replace_motif(build_command, path_soft, query, database, database_hmm,
-                  output, thread, e_value):
+                  output, thread, e_value, tmp):
     """
     """
     print(build_command, file=sys.stderr)
@@ -260,6 +267,7 @@ def replace_motif(build_command, path_soft, query, database, database_hmm,
     build_command = build_command.replace('%hmm_db', database_hmm)
     build_command = build_command.replace('%output', output)
     build_command = build_command.replace('%e_value', str(e_value))
+    build_command = build_command.replace('%temporary', tmp)
     print(build_command, file=sys.stderr)
     return build_command
 
@@ -304,7 +312,8 @@ def extract_homology(output_file, soft): #, reverse):
             else:
                 output_reader = csv.reader(output, delimiter="\t")
                 for line in output_reader:
-                    if len(line) == 12:
+                    #if len(line) == 12:
+                    if len(line) > 1:
                         homologous += [line[interest]]
     except IOError:
         sys.exit("Error : cannot read {0}".format(output_file))
@@ -646,7 +655,7 @@ def filter_sequence_length(results, fasta_file, listhomology, length_min,
 def write_check_data(results, result_dict, origin, nbest, selection=None):
     """Write the different properties of selected homologues
     """
-    output_file = results + origin + "_hit_properties.tsv"
+    output_file = results + os.sep + origin + "_hit_properties.tsv"
     try:
         with open(output_file, "wt") as output:
             output_writer = csv.writer(output, delimiter='\t')
@@ -745,7 +754,7 @@ def main():
     conf_data = Inconfig(args.config, args.results)
     # Analyze the homology for each software
     for num, soft in enumerate(args.software):
-        output = args.results + soft + "_protein_homology.txt"
+        output = args.results + os.sep + soft + "_protein_homology.txt"
         path_soft = get_path(soft, args.path_software, num)
         # Compute homology
         if not os.path.isfile(output) or "force_computation" in args.behavior:
@@ -759,7 +768,7 @@ def main():
                     run_command(replace_motif(conf_data.hdict[soft], path_soft,
                                         args.database, args.query,
                                         args.query_hmm, output, args.thread,
-                                        args.e_value))
+                                        args.e_value, args.tmp))
                     #else:
                     #run_command(replace_motif(conf_data.hdict[soft],
                                                 #path_soft, args.query,
@@ -768,19 +777,20 @@ def main():
                                                 #args.thread, args.e_value))
                 else:
                     if((soft == "blastp" or soft == "psiblast"
-                        or soft == "blastx" or soft == "tblastn")
+                        or soft == "blastx" or soft == "tblastn"
+                        or soft == "mmseqs")
                        and args.database_blast):
                         run_command(
                             replace_motif(conf_data.hdict[soft], path_soft,
                                           args.query, args.database_blast,
                                           args.query_hmm, output,
-                                          args.thread, args.e_value))
+                                          args.thread, args.e_value, args.tmp))
                     else:
                         run_command(
                             replace_motif(conf_data.hdict[soft], path_soft,
                                           args.query, args.database,
                                           args.query_hmm, output,
-                                          args.thread, args.e_value))
+                                          args.thread, args.e_value, args.tmp))
             except KeyError:
                 sys.exit("Key {0} is not in the configuration "
                          "file.".format(soft))
@@ -837,11 +847,12 @@ def main():
                 # write_data(args.results, result_stat, soft)
             # Extract homologous sequence
             if "extract" in args.behavior:
-                output_fasta = args.results + soft + "_protein_homology.fasta"
+                output_fasta = args.results + os.sep + soft + "_protein_homology.fasta"
+                print(listhomology)
                 # Get a multifasta that contains only the candidates and
                 # homologous proteins
                 print("Write sequence of the hits in {0}".format(output_fasta))
-                register_fasta(args.results, args.query, listhomology, output_fasta)
+                register_fasta(args.results, args.database, listhomology, output_fasta)
         else:
             # Add elements
             all_listhomology += [listhomology]
@@ -907,7 +918,7 @@ def main():
             else:
                 write_check_data(args.results, result_dict, "all", args.nbest)
         if "extract" in args.behavior and len(group_elements) > 0:
-            output_fasta = args.results + "all_protein_homology.fasta"
+            output_fasta = args.results + os.sep + "all_protein_homology.fasta"
             # Get a multifasta that contains only the homologous proteins
             print("Write sequence of the hits in {0}".format(output_fasta))
             #if args.reverse:
