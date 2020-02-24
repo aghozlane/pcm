@@ -18,26 +18,29 @@ params.out = "${baseDir}/example/res"
 params.modelling = "${params.out}/modelling"
 params.cpu = 2
 params.cpu_candidates = 4
-//params.database = "${baseDir}/database/"
-params.database = "/usr/local/bin/database/"
+params.database = "${baseDir}/database/"
+//params.database = "/usr/local/bin/database/"
 params.universal_model = "${params.database}/universal_model.csv"
+//params.universal_model = "/usr/local/bin/database/universal_model.csv"
 params.cleaned_pdb = "${params.database}/cleaned_pdb/"
-//params.proq = "$HOME/soft/ProQv1.2/"
-params.proq = "/usr/local/bin/"
-//params.psipred = "$HOME/soft/psipred/"
-params.psipred = "/usr/local/bin/"
+params.proq = "$HOME/soft/ProQv1.2/"
+//params.proq = "/usr/local/bin/"
+params.psipred = "$HOME/soft/psipred/"
+//params.psipred = "/usr/local/bin/"
+params.mypmfs = "${baseDir}/bin/"
+//params.mypmfs = "/usr/local/bin/"
 params.modelling_quality = "fast"
 params.model = 6
 params.template = 3
 params.hfinder_evalue = 1E-5
-//params.tmalign_dir = "${baseDir}/soft/"
-params.tmalign_dir = "/usr/local/bin/"
-//params.mammoth_dir = "${baseDir}/soft/"
-params.mammoth_dir = "/usr/local/bin/"
+params.tmalign_dir = "${baseDir}/soft/"
+//params.tmalign_dir = "/usr/local/bin/"
+params.mammoth_dir = "${baseDir}/soft/"
+//params.mammoth_dir = "/usr/local/bin/"
 params.family = "aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van"
 filter = params.family
 tab = filter.tokenize( ',' )
-
+params.trained_data = "${baseDir}/trained_data/"
 params.predout = "${params.out}/prediction_output.tsv"
 params.matrixout = "${params.out}/pcm_result.tsv"
 params.predhtmlout = "${params.out}/result.html"
@@ -46,6 +49,10 @@ myDir = file(params.out)
 myDir.mkdirs()
 modDir = file(params.modelling)
 modDir.mkdirs()
+
+multifastaChannel = Channel
+                .fromPath("${params.in}")
+                .ifEmpty { exit 1, "Missing parameter: ${params.in}" }
 
 params.help=false
 
@@ -66,10 +73,6 @@ if(params.help){
     usage()
     exit(1)
 }
-
-multifastaChannel = Channel
-                    .fromPath("${params.in}")
-                    .ifEmpty { exit 1, "Missing parameter: ${params.in}" }
 
 familyChannel = Channel
                  .from(
@@ -110,7 +113,13 @@ process index_query {
 
     shell:
     """
-    makeblastdb -in !{fasta} -dbtype prot
+    if [ "!{params.modelling_quality}"  ==  "fast"]
+    then
+        mmseqs createdb !{fasta} targetDB
+        mmseqs createindex  targetDB /local/scratch/tmp --threads !{params.cpu_candidates}
+    else
+        makeblastdb -in !{fasta} -dbtype prot
+    fi
     """
 }
 
@@ -129,8 +138,13 @@ process search_distant_homologuous {
 
     shell:
     """
-    mkdir !{fam[0]}_candidates/
-    hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+    mkdir !{fam[0]}_candidates/ tmp
+    if [ "!{params.modelling_quality}"  ==  "fast" ]
+    then
+        hfinder.py -q !{fam[3]} -d ${fasta} -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+    else
+        hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+    fi
     if [ -f "!{fam[0]}_candidates/all_protein_homology.fasta" ]
     then
         mv !{fam[0]}_candidates/all_protein_homology.fasta !{fam[0]}_candidates/!{fam[0]}_candidates.fasta
@@ -161,24 +175,25 @@ process homology_modelling {
     cpus params.cpu
     label 'modelling'
     validExitStatus 0,3
+    errorStrategy 'retry'
 
     input:
     set fam, file(fasta) from fastaChannel
 
     output:
-    set fam, file(fasta), file("*.horiz"), file("best_model_ref/*.pdb"), file("ref/*/result_proq_*"), file("ref/*/modeller_summary_*.csv"), file("best_model_tneg/*.pdb"), file("tneg/*/result_proq_*"), file("tneg/*/modeller_summary_*.csv") optional true into modelChannel
-    file("*/*/*.svg") into imgChannel
-    file("*/*/*.pdb") into allPDBChannel
+    set fam, file(fasta), file("ref/*/*.horiz"), file("best_model_ref/*.pdb"), file("ref/*/result_proq_*"), file("ref/*/result_mypmfs_*"), file("ref/*/modeller_summary_*.csv"), file("tneg/*/*.horiz"), file("best_model_tneg/*.pdb"), file("tneg/*/result_proq_*"), file("tneg/*/result_mypmfs_*"), file("tneg/*/modeller_summary_*.csv") optional true into modelChannel
+    file("*/*/*.svg") optional true into imgChannel
+    file("*/*/*.pdb") optional true into allPDBChannel
 
 
     shell:
     """
-    !{params.psipred}/runpsipred !{fasta} !{params.cpu}
+    #runpsipred !{fasta} !{params.cpu}
     mkdir -p ref/!{fasta.baseName}/ best_model_ref/ tneg/!{fasta.baseName}/ best_model_tneg/
-    # ref
-    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp
+    # ref -d \$(pwd)/!{fasta.baseName}.horiz
+    modeller_script_singularity.py -l model check -s proq_standalone mypmfs -f !{fasta} -r ref/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_ref_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} !{params.mypmfs} -j !{params.psipred}/ -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp -smypmfs !{params.trained_data}
     # tneg
-    modeller_script_singularity.py -l model check -s proq_standalone -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} -d !{fasta.baseName}.horiz -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp
+    modeller_script_singularity.py -l model check -s proq_standalone mypmfs -f !{fasta} -r tneg/!{fasta.baseName}/ -pd !{params.database}/!{fam}/!{fam}_tneg_pdb.faa -pr !{params.cleaned_pdb} -k !{params.proq} !{params.mypmfs} -j !{params.psipred}/ -q !{params.modelling_quality} -n !{params.model}  -nb !{params.template} -t !{params.cpu}  -pi blastp -smypmfs !{params.trained_data}
     # Get the best model for ref
     summary_ref=\$(ls -1 ref/!{fasta.baseName}//modeller_summary_*.csv  2>/dev/null |head -1)
     # Check ref file
@@ -202,22 +217,22 @@ process homology_modelling {
 
 process prosa_check {
      tag "${fasta.baseName}:${fam}"
-     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
+     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow'
      label 'modelling'
      errorStrategy 'retry'
 
      input:
-     set val(fam), file(fasta), horiz, best_pdb_ref, proq_ref, summary_ref, best_pdb_tneg, proq_tneg, summary_tneg from modelChannel
+     set val(fam), file(fasta), horiz_ref, best_pdb_ref, proq_ref, mypmfs_ref, summary_ref, horiz_tneg, best_pdb_tneg, proq_tneg, mypmfs_tneg, summary_tneg from modelChannel
 
      output:
-     set val(fam), file(fasta), best_pdb_ref, proq_ref, file("ref/*/result_prosa_*"), summary_ref, best_pdb_tneg, proq_tneg, file("tneg/*/result_prosa_*"), summary_tneg into extractChannel
+     set val(fam), file(fasta), best_pdb_ref, proq_ref, mypmfs_ref, file("ref/*/result_prosa_*"), summary_ref, best_pdb_tneg, proq_tneg, mypmfs_tneg, file("tneg/*/result_prosa_*"), summary_tneg into extractChannel
      set val(fam), file(fasta), best_pdb_ref, best_pdb_tneg into structuralAlignmentChannel
 
      shell:
      """
      mkdir -p ref/!{fasta.baseName}/ tneg/!{fasta.baseName}/
-     modeller_script_singularity.py -s prosa -l check -sm !{summary_ref} -d !{horiz}
-     modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz}
+     modeller_script_singularity.py -s prosa -l check -sm !{summary_ref} -d !{horiz_ref}
+     modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz_tneg}
      cp \$(dirname !{summary_ref})/result_prosa_* ref/!{fasta.baseName}/
      cp \$(dirname !{summary_tneg})/result_prosa_* tneg/!{fasta.baseName}/
      """
@@ -227,7 +242,7 @@ process extract_result {
      tag "${fasta.baseName}:${fam}"
 
      input:
-     set val(fam), file(fasta), best_pdb_ref, proq_ref, prosa_ref, summary_ref, best_pdb_tneg, proq_tneg, prosa_tneg, summary_tneg from extractChannel
+     set val(fam), file(fasta), best_pdb_ref, proq_ref, mypmfs_ref, prosa_ref, summary_ref, best_pdb_tneg, proq_tneg, mypmfs_tneg, prosa_tneg, summary_tneg from extractChannel
 
      output:
      file("res_ref_summary.tsv") into refSummaryChannel
@@ -244,7 +259,8 @@ process extract_result {
      zscore_ref=\$(tail -n +2 !{prosa_ref} |head -1 |awk '{print \$2}'|sed -e  's/\\r//g'  )
      maxsub_ref=\$(tail -n +2 !{proq_ref} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g' )
      lgscore_ref=\$(tail -n +2 !{proq_ref} |head -1 |awk '{print \$3}'| sed -e  's/\\r//g')
-     echo -e "\$best_model_ref\t!{fam}\t\$molpdf_ref\t\$dope_ref\t\$normalized_dope_ref\t\$GA341_score_ref\t\$zscore_ref\t\$maxsub_ref\t\$lgscore_ref" > res_ref_summary.tsv
+     pseudo_energy_ref=\$(tail -n +2 !{mypmfs_ref} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g')
+     echo -e "\$best_model_ref\t!{fam}\t\$molpdf_ref\t\$dope_ref\t\$normalized_dope_ref\t\$GA341_score_ref\t\$zscore_ref\t\$maxsub_ref\t\$lgscore_ref\t\$pseudo_energy_ref" > res_ref_summary.tsv
      # Negative
      best_model_tneg=\$(tail -n +2 !{summary_tneg} |head -1 |cut -s -f1|sed -e  "s/\\r//g"|sed "s/.pdb//g")
      dope_tneg=\$(tail -n +2 !{summary_tneg} |head -1 |cut -s -f3|sed -e  's/\\r//g')
@@ -254,21 +270,22 @@ process extract_result {
      zscore_tneg=\$(tail -n +2 !{prosa_tneg} |head -1 |awk '{print \$2}'|sed -e  's/\\r//g'  )
      maxsub_tneg=\$(tail -n +2 !{proq_tneg} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g' )
      lgscore_tneg=\$(tail -n +2 !{proq_tneg} |head -1 |awk '{print \$3}'| sed -e  's/\\r//g')
-     echo -e "\$best_model_tneg\t!{fam}\t\$molpdf_tneg\t\$dope_tneg\t\$normalized_dope_tneg\t\$GA341_score_tneg\t\$zscore_tneg\t\$maxsub_tneg\t\$lgscore_tneg" > res_tneg_summary.tsv
+     pseudo_energy_tneg=\$(tail -n +2 !{mypmfs_tneg} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g')
+     echo -e "\$best_model_tneg\t!{fam}\t\$molpdf_tneg\t\$dope_tneg\t\$normalized_dope_tneg\t\$GA341_score_tneg\t\$zscore_tneg\t\$maxsub_tneg\t\$lgscore_tneg\t\$pseudo_energy_tneg" > res_tneg_summary.tsv
      """
 }
 
 // run compute_structural_alignment.sh
 process structural_alignment {
     tag "${fasta.baseName}:${fam}"
-    publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
+    publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow', pattern: '*/struct_matrix_*.tsv'
     cpus params.cpu
 
     input:
     set val(fam), file(fasta), best_pdb_ref, best_pdb_tneg from structuralAlignmentChannel
 
     output:
-    file("*/struct_matrix_*.tsv") into structAliChannel
+    //file("*/struct_matrix_*.tsv") into structAliChannel
     file("*_candidates_ref_vs_ref/struct_matrix_mammoth.tsv") into refMammothChannel
     file("*_candidates_ref_vs_ref/struct_matrix_TMalign.tsv") into refTMalignChannel
     file("*_candidates_tneg_vs_tneg/struct_matrix_mammoth.tsv") into tnegMammothChannel

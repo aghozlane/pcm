@@ -62,12 +62,12 @@ except ImportError:
 
 
 __author__ = "Amine Ghozlane"
-__copyright__ = "Copyright 2014, INRA"
-__credits__ = ["Amine Ghozlane", "Joseph Rebehmed", "Alexandre G. de Brevern"]
+__copyright__ = "Copyright 2020, Institut Pasteur"
+__credits__ = ["Amine Ghozlane"]
 __license__ = "GPL"
 __version__ = "1.0.0"
 __maintainer__ = "Amine Ghozlane"
-__email__ = "amine.ghozlane@jouy.inra.fr"
+__email__ = "amine.ghozlane@pasteur.fr"
 __status__ = "Developpement"
 
 
@@ -122,6 +122,8 @@ class ModelingConfig:
                                                 'psipred')
         self.hdict["procheck"] = self.config.get('Checking_config',
                                                  'procheck')
+        self.hdict["mypmfs"] = self.config.get('Checking_config',
+                                                 'mypmfs')
         self.hdict["prosa"] = self.config.get('Checking_config', 'prosa')
         self.hdict["proq"] = self.config.get('Checking_config', 'proq')
         self.hdict["proq_psipred"] = self.config.get('Checking_config',
@@ -130,6 +132,8 @@ class ModelingConfig:
                                                    'proq_alone')
         self.hdict["verify3D"] = self.config.get('Checking_config',
                                                  'verify3D')
+        self.hdict["mypmfs"] = self.config.get('Checking_config',
+                                                 'mypmfs')
 
     def writeconfig(self):
         """Write modeling config
@@ -171,7 +175,9 @@ class ModelingConfig:
         # -mode 3dcoffee -template_file %pdb
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
-                        "%path_softprocheck.scr %pdb 1.5")
+                        "%path_softprocheck.scr %pdb 1.5 > %output")
+        self.config.set('Checking_config', 'mypmfs',
+                        "%path_softscoring -i %pdb -d %database > %output")
         self.config.set('Checking_config', 'proq',
                         "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
         self.config.set('Checking_config', 'proq_psipred',
@@ -349,15 +355,19 @@ def get_arguments():
                         '(0-9 - default = >7).')
     parser.add_argument('-s', dest='structure_check', type=str, nargs='+',
                         choices=["procheck", "proq", "prosa",
-                                 "verify3D", "proq_standalone"],
+                                 "verify3D", "proq_standalone", "mypmfs"],
                         default=["procheck", "proq", "prosa", "verify3D"],
                         help='Select software for structure checking '
                         '(ProQ significance is enhanced with psipred '
                         'results - do not require ProQ and ProQ standalone).')
+    parser.add_argument('-smypmfs', dest='training_data', type=isdir,
+                        action=FullPaths,
+                        help='Mypmfs training directory (required if mypmfs '
+                        'structure checking enabled).')
     parser.add_argument('-k', dest='path_check', type=isdir, default=[],
                         action=FullPaths, nargs="+",
-                        help='Indicate the path to procheck/proq softwares'
-                              '- if both are used first procheck, next proq.')
+                        help='Indicate the path to procheck/proq/mypmfs softwares'
+                              '- if both are used first procheck, next proq and mypmfs.')
     parser.add_argument('-sb', dest='number_best', type=int, default=1,
                         help='Select number of models for verification'
                         '(from the best model according to dope score - '
@@ -701,7 +711,7 @@ def adjust_PIR_format(aln_pir_file, data_dict, pdb_codes, pdb_files,
                         data_dict[element][1][end_aln_posit:], os.linesep))
                 het_atm_flag = True
     except IOError:
-        sys.exit("Error cannot open {0}".format())
+        sys.exit("Error cannot open {0}".format(output_file))
     assert(structure_present)
     return output_file
 
@@ -1699,9 +1709,13 @@ def run_prosa(website_path, pdb, results):
             #path_eplot = req.text.split("<img src='upload/")[2].split(
                                                                 #"' alt='")[0]
         else:
-            sys.exit("No data received from verify3D")
+            sys.exit("No data received from prosa")
     except ValueError:
         sys.exit("Something went wrong with {0}".format(pdb))
+    except IndexError:
+        print("Data not received from prosa", file=sys.stderr)
+        # Maybe too fast for prosa, lets retry
+        pdb, zscore = run_prosa(website_path, pdb, results)
     # Download profile picture
     if(path_hrplot):
         save_picture(website_path + "upload/" + path_hrplot,
@@ -1829,8 +1843,26 @@ def parse_proq(proq_result):
     return [maxsub, lgscore]
 
 
+def parse_mypfms(mypmfs_result):
+    mypmfs_regex = re.compile(r"^Pseudo-energy\s+=\s+(\S+)")
+    try:
+        with open(mypmfs_result, "rt") as mypmfs:
+            for line in mypmfs:
+                mypmfs_match = mypmfs_regex.match(line)
+                if mypmfs_match:
+                    mypmfs_score = float(mypmfs_match.group(1))
+            assert(mypmfs_score != None)
+    except IOError:
+        sys.exit("Error cannot open {0}".format(proq_result))
+    except ValueError:
+        sys.exit("Bad casting with line : {0}".format(line))
+    except AssertionError:
+        sys.exit("The program has failed to parse proq result:"
+                 "{0}".format(proq_result))
+    return [mypmfs_score]
+
 def run_checking(conf_data, summary_data, structure_check, path_check,
-                 number_best, pred, psipred_file, REQUESTS, results):
+                 number_best, pred, psipred_file, REQUESTS, results, training_data):
     """
      :Parameters:
       - conf_data: Configuration dictionary
@@ -1840,6 +1872,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
     data_prosa = []
     data_verify3D = {}
     data_verify3D_smooth = {}
+    data_mypmfs = []
     num_struct = 0
     if('procheck' in structure_check):
         if len(path_check) > 0:
@@ -1851,6 +1884,11 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
             proq_path = path_check.pop(0)
         else:
             proq_path = ""
+    if('mypmfs' in structure_check):
+        if len(path_check) > 0:
+            mypmfs_path = path_check.pop(0)
+        else:
+            mypmfs_path = ""
     for pdb in sorted(summary_data.iteritems(), key=lambda x: x[1][1]):
         if num_struct >= number_best:
             break
@@ -1883,6 +1921,15 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
                 status = False
             if status:
                 data_proq += [result_proq]
+        if('mypmfs' in structure_check and training_data):
+            print("Run mypmfs for " + pdb[0])
+            output_mypmfs = "mypfms_" + ".".join(pdb[0].split(".")[:-1]) + ".txt"
+            res = replace_motif(conf_data.hdict['mypmfs'],
+                                      mypmfs_path, "", [pdb[0]], output_mypmfs, "", "",
+                                      "", training_data)
+            print(res)
+            run_command(res)
+            data_mypmfs += [[pdb[0]] + parse_mypfms(output_mypmfs)]
         if('prosa' in structure_check and REQUESTS):
             print("Run prosa for " + pdb[0])
             status = True
@@ -1906,7 +1953,7 @@ def run_checking(conf_data, summary_data, structure_check, path_check,
                 print("Error cannot connect to Verify3D", file=sys.stderr)
                 data_verify3D = {}
         num_struct += 1
-    return data_proq, data_prosa, data_verify3D, data_verify3D_smooth
+    return data_proq, data_mypmfs, data_prosa, data_verify3D, data_verify3D_smooth
 
 
 def write_checking(data, title, filename):
@@ -2309,12 +2356,12 @@ def main():
         if args.number_best > args.number_model:
             args.number_best = args.number_model
         # Start structure checking
-        (data_proq, data_prosa,
+        (data_proq, data_mypmfs, data_prosa,
          data_verify3D, data_verify3D_smooth) = run_checking(
                                         conf_data, summary_data,
                                         args.structure_check, args.path_check,
                                         args.number_best, pred, args.psipred,
-                                        REQUESTS, args.results)
+                                        REQUESTS, args.results, args.training_data)
         if(args.list_atom):
             interest_atom_dict = load_interest_atom(args.list_atom)
             run_check_distances(interest_atom_dict, args.default_distances,
@@ -2322,6 +2369,10 @@ def main():
         if data_proq:
             write_checking(data_proq, ["PDB", "maxsub", "lgscore"],
                            args.results + os.sep + "result_proq_{0}.txt"
+                           .format(sessionid))
+        if data_mypmfs:
+            write_checking(data_mypmfs, ["PDB", "pseudo-energy"],
+                           args.results + os.sep + "result_mypmfs_{0}.txt"
                            .format(sessionid))
         if data_prosa:
             write_checking(data_prosa, ["PDB", "zscore"],

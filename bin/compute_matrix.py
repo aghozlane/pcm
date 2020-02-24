@@ -21,7 +21,7 @@ import csv
 from math import isnan
 
 __author__ = "Amine Ghozlane"
-__copyright__ = "Copyright 2015, Institut Pasteur"
+__copyright__ = "Copyright 2020, Institut Pasteur"
 __license__ = "GPL"
 __version__ = "1.0.0"
 __maintainer__ = "Amine Ghozlane"
@@ -120,13 +120,13 @@ def write_result(gene_res, name, output_file):
                                     "d_TM-score_TMalign", "molpdf_ref",
                                     "dope_score_ref", "normalized_dope_ref",
                                     "GA341_score_ref", "zscore_ref",
-                                    "maxsub_ref", "lgscore_ref",
+                                    "maxsub_ref", "lgscore_ref","mypmfs_ref",
                                     "Z-score_mammoth_ref",
                                     "TM-score_mammoth_ref", "RMSD_TMalign_ref",
                                     "TM-score_TMalign_ref", "molpdf_tneg",
                                     "dope_score_tneg", "normalized_dope_tneg",
                                     "GA341_score_tneg", "zscore_tneg",
-                                    "maxsub_tneg", "lgscore_tneg",
+                                    "maxsub_tneg", "lgscore_tneg", "mypmfs_tneg",
                                     "Z-score_mammoth_tneg",
                                     "TM-score_mammoth_tneg",
                                     "RMSD_TMalign_tneg",
