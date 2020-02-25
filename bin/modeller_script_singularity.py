@@ -177,7 +177,7 @@ class ModelingConfig:
         self.config.set('Checking_config', 'procheck',
                         "%path_softprocheck.scr %pdb 1.5 > %output")
         self.config.set('Checking_config', 'mypmfs',
-                        "%path_softscoring -i %pdb -d %database > %output")
+                        "%path_softscoring -i %pdb -d %database -e %output")
         self.config.set('Checking_config', 'proq',
                         "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
         self.config.set('Checking_config', 'proq_psipred',
