@@ -176,7 +176,7 @@ class ModelingConfig:
         self.config.add_section('Checking_config')
         self.config.set('Checking_config', 'procheck',
                         "%path_softprocheck.scr %pdb 1.5 > %output")
-        self.config.set('Checking_config', 'mypmfs',
+        self.config.set('Checking_config', 'mypmfs',    
                         "%path_softscoring -i %pdb -d %database -e %output")
         self.config.set('Checking_config', 'proq',
                         "http://www.sbc.su.se/~bjornw/ProQ/ProQ.cgi")
@@ -1856,12 +1856,12 @@ def parse_mypfms(mypmfs_result):
                     mypmfs_score = float(mypmfs_match.group(1))
             assert(mypmfs_score != None)
     except IOError:
-        sys.exit("Error cannot open {0}".format(proq_result))
+        sys.exit("Error cannot open {0}".format(mypmfs_result))
     except ValueError:
         sys.exit("Bad casting with line : {0}".format(line))
     except AssertionError:
-        sys.exit("The program has failed to parse proq result:"
-                 "{0}".format(proq_result))
+        sys.exit("The program has failed to parse mypmfs result:"
+                 "{0}".format(mypmfs_result))
     return [mypmfs_score]
 
 def run_checking(conf_data, summary_data, structure_check, path_check,
