@@ -1844,7 +1844,10 @@ def parse_proq(proq_result):
 
 
 def parse_mypfms(mypmfs_result):
+    """Parse mypmfs result
+    """
     mypmfs_regex = re.compile(r"^Pseudo-energy\s+=\s+(\S+)")
+    mypmfs_score = None
     try:
         with open(mypmfs_result, "rt") as mypmfs:
             for line in mypmfs:
