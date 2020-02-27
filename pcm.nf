@@ -113,7 +113,7 @@ process index_query {
 
     shell:
     """
-    if [ "!{params.modelling_quality}"  ==  "fast"]
+    if [ "!{params.modelling_quality}"  ==  "fast" ]
     then
         mmseqs createdb !{fasta} targetDB
         mmseqs createindex  targetDB /local/scratch/tmp --threads !{params.cpu_candidates}
