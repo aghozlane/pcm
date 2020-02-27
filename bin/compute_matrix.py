@@ -78,6 +78,8 @@ def load_data(gene_res, data_file, tag_type):
                 gene = line[0].split(".")[0]
                 pdb_id = line[0].split(".")[1]
                 family = line[1]
+                #print(gene, family)
+                #print(line[2:])
                 if (gene, family) in gene_res:
                     gene_res[gene, family].update({tag_type:line[2:], "pdb_id_"+ tag_type:pdb_id})
                 else:
@@ -115,7 +117,7 @@ def write_result(gene_res, name, output_file):
                                     "pdb_id_tneg", "d_molpdf",
                                     "d_dope_score", "d_normalized_dope",
                                     "d_GA341_score", "d_zscore", "d_maxsub",
-                                    "d_lgscore", "d_Z-score_mammoth",
+                                    "d_lgscore", "d_mypmfs", "d_Z-score_mammoth",
                                     "d_TM-score_mammoth", "d_RMSD_TMalign",
                                     "d_TM-score_TMalign", "molpdf_ref",
                                     "dope_score_ref", "normalized_dope_ref",
@@ -173,13 +175,15 @@ def write_result(gene_res, name, output_file):
                     gene_res[gene]["alignment_neg_TMalign"] = [0] * 3
                 #print(gene_res[gene]["quality_ref"])
                 #print(gene_res[gene]["quality_neg"])
-                print("quality")
+                #print("quality")
+                #print(gene)
+                #print(gene_res[gene]["quality_ref"])
                 diff_quality = differential(gene_res[gene]["quality_ref"],
                                             gene_res[gene]["quality_neg"])
-                print("mammoth")
+                #print("mammoth")
                 diff_mammoth = differential(gene_res[gene]["alignment_ref_mammoth"][1:],
                                             gene_res[gene]["alignment_neg_mammoth"][1:])
-                print("tmalign")
+                #print("tmalign")
                 diff_TMalign = differential(gene_res[gene]["alignment_ref_TMalign"][1:],
                                             gene_res[gene]["alignment_neg_TMalign"][1:])
                 output_writer.writerow([gene[0], "Candidate_" + gene[1],
