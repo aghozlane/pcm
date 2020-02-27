@@ -23,10 +23,10 @@ params.database = "${baseDir}/database/"
 params.universal_model = "${params.database}/universal_model.csv"
 //params.universal_model = "/usr/local/bin/database/universal_model.csv"
 params.cleaned_pdb = "${params.database}/cleaned_pdb/"
-params.proq = "$HOME/soft/ProQv1.2/"
-//params.proq = "/usr/local/bin/"
-params.psipred = "$HOME/soft/psipred/"
-//params.psipred = "/usr/local/bin/"
+//params.proq = "$HOME/soft/ProQv1.2/"
+params.proq = "/usr/local/bin/"
+//params.psipred = "$HOME/soft/psipred/"
+params.psipred = "/usr/local/bin/"
 //params.mypmfs = "${baseDir}/bin/"
 params.mypmfs = "/usr/local/bin/"
 params.modelling_quality = "fast"
@@ -117,6 +117,7 @@ process index_query {
     then
         mmseqs createdb !{fasta} targetDB
         mmseqs createindex  targetDB tmp --threads !{params.cpu_candidates}
+
     else
         makeblastdb -in !{fasta} -dbtype prot
     fi
