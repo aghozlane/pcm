@@ -176,8 +176,8 @@ def write_result(gene_res, name, output_file):
                 #print(gene_res[gene]["quality_ref"])
                 #print(gene_res[gene]["quality_neg"])
                 #print("quality")
-                print(gene)
-                print(gene_res[gene]["quality_ref"])
+                #print(gene)
+                #print(gene_res[gene]["quality_ref"])
                 diff_quality = differential(gene_res[gene]["quality_ref"],
                                             gene_res[gene]["quality_neg"])
                 #print("mammoth")
