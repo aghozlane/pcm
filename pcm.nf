@@ -138,7 +138,7 @@ process search_distant_homologuous {
 
     shell:
     """
-    mkdir !{fam[0]}_candidates/ tmp
+    mkdir !{fam[0]}_candidates/
     if [ "!{params.modelling_quality}"  ==  "fast" ]
     then
         hfinder.py -q !{fam[3]} -d !{fasta} -db targetDB  -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract fastcheck -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
