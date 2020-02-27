@@ -27,8 +27,8 @@ params.proq = "$HOME/soft/ProQv1.2/"
 //params.proq = "/usr/local/bin/"
 params.psipred = "$HOME/soft/psipred/"
 //params.psipred = "/usr/local/bin/"
-params.mypmfs = "${baseDir}/bin/"
-//params.mypmfs = "/usr/local/bin/"
+//params.mypmfs = "${baseDir}/bin/"
+params.mypmfs = "/usr/local/bin/"
 params.modelling_quality = "fast"
 params.model = 6
 params.template = 3
@@ -141,7 +141,7 @@ process search_distant_homologuous {
     mkdir !{fam[0]}_candidates/ tmp
     if [ "!{params.modelling_quality}"  ==  "fast" ]
     then
-        hfinder.py -q !{fam[3]} -d ${fasta} -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+        hfinder.py -q !{fam[3]} -d !{fasta} -db targetDB  -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract fastcheck -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
     else
         hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
     fi
