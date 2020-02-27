@@ -116,7 +116,7 @@ process index_query {
     if [ "!{params.modelling_quality}"  ==  "fast" ]
     then
         mmseqs createdb !{fasta} targetDB
-        mmseqs createindex  targetDB /local/scratch/tmp --threads !{params.cpu_candidates}
+        mmseqs createindex  targetDB tmp --threads !{params.cpu_candidates}
     else
         makeblastdb -in !{fasta} -dbtype prot
     fi
