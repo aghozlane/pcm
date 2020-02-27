@@ -117,7 +117,7 @@ class Inconfig:
                         "%hmm_db %query > log_hmmscan.txt")
         self.config.set('Homology_config', 'mmseqs', "%path_softmmseqs "
                         "easy-search %query %database %output %temporary --threads %proc "
-                        " --search-type 1")
+                        " --search-type 1 --format-output query,target,taln,qaln")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_softclustalo -i %multifasta -o %output "
@@ -198,7 +198,7 @@ def getArguments():
                         help='Temporary folder for mmseqs.')
     parser.add_argument('-b', dest='behavior', default=[],
                         choices=["force_computation", "extract",
-                                 "cumulative", "check"],
+                                 "cumulative", "check", "fastcheck"],
                         nargs='+', help='Behavior : force computation (if '
                         'previous result), extract sequence, check identity.')
     parser.add_argument('-e', dest='e_value', type=float, default=0.001,
@@ -732,6 +732,20 @@ def filter_sequence_align(listhomology, result_dict, idmin, idmax, simmin,
             selected.append(element)
     return selected
 
+def extract_sequence_properties(mmseqs_result):
+    """
+    """
+    result_list = []
+    try:
+        with open(mmseqs_result, "rt") as mmseqs:
+            mmseqs_reader = csv.reader(mmseqs, delimiter="\t")
+            for line in mmseqs_reader:
+                result_list.append(estimate_parameters(
+                        line[0], line[1],
+                        line[2], line[3]))
+    except IOError:
+        sys.exit("Error cannot {0}".format(mmseqs_result))
+    return result_list
 
 #==============================================================
 # Main program
@@ -817,14 +831,21 @@ def main():
                                 args.filter_length_minimum,
                                 args.filter_length_maximum, soft)
             # Check identity, similarity, coverage
-            if "check" in args.behavior:
+            if "check" in args.behavior or "fastcheck" in args.behavior:
+                if "fastcheck" in args.behavior and soft == "mmseqs":
+                    print("Fast check is only available for mmseqs")
+                    print(output)
+                    result_stat = extract_sequence_properties(output)
+
                 # No output_fasta
                 #if args.reverse:
                 #else:
-                result_stat = compute_sequence_properties(
+                else:
+                    result_stat = compute_sequence_properties(
                                     args.results, conf_data, args.path_clustalo,
                                     args.query, args.database, listhomology,
                                     args.thread)
+                    print(result_stat)
                 # Order the information
                 result_dict = order_dict(result_stat)
                 if(args.filter_identity_minimum or args.filter_identity_maximum
@@ -886,10 +907,10 @@ def main():
             # Analyse candidates
             #if args.reverse:
             result_stat = compute_sequence_properties(args.results, conf_data,
-                                                    args.path_clustalo,
-                                                    args.query, args.database,
-                                                    group_elements,
-                                                    args.thread)
+                                                args.path_clustalo,
+                                                args.query, args.database,
+                                                group_elements,
+                                                args.thread)
             #else:
             #result_stat = compute_sequence_properties(args.results, conf_data,
                                                     #args.path_clustalo,
@@ -917,6 +938,9 @@ def main():
                                  group_elements)
             else:
                 write_check_data(args.results, result_dict, "all", args.nbest)
+        
+
+
         if "extract" in args.behavior and len(group_elements) > 0:
             output_fasta = args.results + os.sep + "all_protein_homology.fasta"
             # Get a multifasta that contains only the homologous proteins
