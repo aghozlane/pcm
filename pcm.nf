@@ -23,10 +23,10 @@ params.database = "${baseDir}/database/"
 params.universal_model = "${params.database}/universal_model.csv"
 //params.universal_model = "/usr/local/bin/database/universal_model.csv"
 params.cleaned_pdb = "${params.database}/cleaned_pdb/"
-params.proq = "$HOME/soft/ProQv1.2/"
-//params.proq = "/usr/local/bin/"
-params.psipred = "$HOME/soft/psipred/"
-//params.psipred = "/usr/local/bin/"
+//params.proq = "$HOME/soft/ProQv1.2/"
+params.proq = "/usr/local/bin/"
+//params.psipred = "$HOME/soft/psipred/"
+params.psipred = "/usr/local/bin/"
 //params.mypmfs = "${baseDir}/bin/"
 params.mypmfs = "/usr/local/bin/"
 params.modelling_quality = "fast"
@@ -117,6 +117,7 @@ process index_query {
     then
         mmseqs createdb !{fasta} targetDB
         mmseqs createindex  targetDB tmp --threads !{params.cpu_candidates}
+        rm -rf tmp
     else
         makeblastdb -in !{fasta} -dbtype prot
     fi
@@ -138,7 +139,7 @@ process search_distant_homologuous {
 
     shell:
     """
-    mkdir !{fam[0]}_candidates/
+    mkdir !{fam[0]}_candidates/ tmp
     if [ "!{params.modelling_quality}"  ==  "fast" ]
     then
         hfinder.py -q !{fam[3]} -d !{fasta} -db targetDB  -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract fastcheck -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
