@@ -360,8 +360,8 @@ process lineartest {
 #!/usr/bin/env Rscript
 library(rmarkdown)
 #x <- read.csv2("!{params.universal_model}")[,c(3:4,6:13)]
-x <- read.csv2("!{params.universal_model}", sep="\\t")[,c(3:4,6:14)]
-y <- read.csv2("!{params.universal_model}", sep="\\t")[,2]
+x <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
+y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2]
 pcm <- read.delim("!{matrix}")
 predout <- paste0(getwd(), "/prediction_output.tsv")
 rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout), 
