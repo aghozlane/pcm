@@ -27,7 +27,7 @@ import multiprocessing as mp
 import csv
 import numpy as np
 import ConfigParser
-
+import pandas as pd
 
 __author__ = "Amine Ghozlane"
 __copyright__ = "Copyright 2014, INRA"
@@ -490,12 +490,12 @@ def report(output, list_pdbfiles, pdb_set, struct_matrix, score, nbest,
     elements = len(score)
     try:
         with open(output, 'wt') as f:
-            writer = csv.writer(f, delimiter='\t')
             #if header_position:
             #    writer.writerow(["PDB_1", "PDB_2"] + score + header_position)
             #else:
             #    writer.writerow(["PDB_1", "PDB_2"] + score)
             if len(list_pdbfiles) > 0:
+                writer = csv.writer(f, delimiter='\t')
                 for i in xrange(0, len(list_pdbfiles)):
                     for j in xrange(i + 1, len(list_pdbfiles)):
                         try:
@@ -518,14 +518,19 @@ def report(output, list_pdbfiles, pdb_set, struct_matrix, score, nbest,
                                 + struct_matrix[:elements])
                         k += 1
             else:
+                result = pd.DataFrame()
                 for query in pdb_set:
                     pdb_set[query].sort(key=lambda x: x[2], reverse=True)
+                    df = pd.DataFrame(pdb_set[query])
+                    df = df.sort_values(by=2, ascending=False)
                     if nbest > 0:
-                        short_set = pdb_set[query][0: nbest]
+                        short_set =df[0: nbest]
                     else:
-                        short_set = pdb_set[query]
-                    for pset in short_set:
-                        writer.writerow([query, family_label] + pset)
+                        short_set = df
+                    short_set.insert(0, "query", query)
+                    short_set.insert(1, "family tabel", family_label)
+                    result = result.append(short_set, ignore_index=True)
+                result.to_csv(f, index=False, header=False, sep='\t')
     except IOError:
         sys.exit("Error : cannot open file {0}".format(output))
 
