@@ -218,7 +218,7 @@ process homology_modelling {
 
 process prosa_check {
      tag "${fasta.baseName}:${fam}"
-     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow', pattern: "ref/*/result_prosa_*"
+     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow', pattern: "*/*/result_prosa_*"
      label 'modelling'
      errorStrategy 'retry'
 
