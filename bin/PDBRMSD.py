@@ -403,7 +403,7 @@ def extract_info(aln_file, regex):
         sys.exit("Something went wrong during the conversion of {0}"
                  .format(e))
     except AssertionError:
-        print("No aligments produced for {0}".format( aln_file))
+        print("No alignment found for : {0}".format(aln_file))
     # Select minimum length score for tmAlign score
     try:
         if seqlen[0] < seqlen[1]:
