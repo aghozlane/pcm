@@ -867,7 +867,7 @@ def main():
                 # write statistics
                 # write_data(args.results, result_stat, soft)
             # Extract homologous sequence
-            if "extract" in args.behavior:
+            if "extract" in args.behavior and len(listhomology) > 0:
                 output_fasta = args.results + os.sep + soft + "_protein_homology.fasta"
                 print(listhomology)
                 # Get a multifasta that contains only the candidates and
@@ -938,7 +938,7 @@ def main():
                                  group_elements)
             else:
                 write_check_data(args.results, result_dict, "all", args.nbest)
-        
+
 
 
         if "extract" in args.behavior and len(group_elements) > 0:

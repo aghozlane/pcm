@@ -104,7 +104,11 @@ familyChannel = Channel
 // index
 process index_query {
     tag "${fasta.baseName}"
-
+    
+    if(params.modelling_quality == "fast"){
+        cpus params.cpu_candidates
+    }
+    
     input:
     file(fasta) from multifastaChannel
 
