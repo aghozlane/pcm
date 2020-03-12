@@ -46,7 +46,7 @@ sudo make install
 It is recommanded to install singularity as root. NEWUSER namespace runtime error can occur on Red Hat system when singularity is installed by an user (see  https://github.com/sylabs/singularity/issues/415).
 Download PCM singularity image (warning: the file is heavy ~ 1Go):
 ```
-wget ftp://shiny01.hosting.pasteur.fr/pub/pcm_202001.img
+wget ftp://shiny01.hosting.pasteur.fr/pub/pcm_202002.img
 ```
 Install nextflow:
 ```
@@ -66,7 +66,7 @@ cd pcm
 # See help with
 nextflow pcm.nf --help
 # Run example calculation
-nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_201909.img
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202002.img
 ```
 
 
@@ -142,7 +142,7 @@ singularity {
 
 # Do not run
 # You can then provide this configuration like this:
-nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_201909.img -c nextflow.config
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202002.img -c nextflow.config
 ```
 More information about nextflow and singularity are available [here](https://www.nextflow.io/docs/latest/singularity.html).
 
@@ -154,7 +154,7 @@ This file enables the usage of singularity on a slurm scheduler and need to be a
 # The profile singularity correspond to an execution on a cluster environment
 profiles{
     singularity {
-        process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm_202001.img'
+        process.container = 'file:///pasteur/homes/aghozlan/pcm/img/pcm_202002.img'
         singularity.enabled = true
         singularity.autoMounts = false
         singularity.runOptions = "-B /pasteur:/pasteur"
@@ -165,7 +165,7 @@ profiles{
 }
 # Do not run
 # You can then provide this configuration like this:
-nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202001.img -c nextflow_global.config -profile singularity
+nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202002.img -c nextflow_global.config -profile singularity
 ```
 In the profile singularity, I indicate where is the container (with process.container). I mount data directory with singularity.runOptions (the path are here indicatives). I select the type of scheduler (with executor) and our cluster option: the qos and the partition for hubbioit.
 
@@ -194,6 +194,7 @@ GA341_score | Modeller | The GA341 score [Melo et al., 2002,John & Šali, 2003] 
 zscore | Prosa | Estimates the compatibility of a sequence with a given fold based on the knowledge base of 3D-structure available [[Sippl 1993](https://onlinelibrary.wiley.com/doi/abs/10.1002/prot.340170404)].
 maxsub | ProQ | Prediction of the MaxSub score performed by a neural network based on atom  and  residue  contacts,  solvent  accessibility,  similarity between the model secondary structure and the secondary structure predicted by Psispred.MaxSub, on the otherhand, divides the structural comparison score by the length of the correct target structure. 
 lgscore | ProQ | Prediction of the Levitt-Gerstein (LG) score score performed by a neural network based on atom  and  residue  contacts,  solvent  accessibility,  similarity between the model secondary structure and the secondary structure predicted by Psispred.  LGscore uses  a  statistical  distribution  to  relate Sstr to the  probability  of finding a higher score by chance (P-value).
+mypmfs | mypmfs | Energy potential learned from the ARDs set of PCM [[Postic 2018](https://www.ncbi.nlm.nih.gov/pubmed/29857183)].
 
 
 #### Quality of the structural alignment
@@ -250,6 +251,9 @@ Johnson, L. S., Eddy, S. R., & Portugaly, E. (2010). Hidden Markov model speed h
 * __Modeller__
  Performs homology modelling of candidate sequence and reference protein structures.
  Fiser, A., & Do, R. K. G. (2000). Modeling of loops in protein structures. _Protein science_, _9_(9), 1753-1773.
+* __MyPMFs__
+ Assess the model quality compared to other PDB with a resistance activity.
+ Postic G., Hamelryck T., Chomilier J., Stratmann D. (2018). MyPMFs: a simple tool for creating statistical potentials to assess protein structural models. _Biochimie_, 151, 37-41.
 * __ProQ__
 Performs quality checking protein models.
 Wallner, B., & Elofsson, A. (2003). Can correct protein models be identified?. _Protein science_, _12_(5), 1073-1086.
