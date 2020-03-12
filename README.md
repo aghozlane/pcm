@@ -159,8 +159,8 @@ profiles{
         singularity.autoMounts = false
         singularity.runOptions = "-B /pasteur:/pasteur"
         process.executor = 'slurm'
-        process.clusterOptions='--qos=hubbioit'
-        process.queue = 'hubbioit'
+        process.clusterOptions='--qos=fast'
+        process.queue = 'fast'
     }
 }
 # Do not run
