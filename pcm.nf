@@ -67,6 +67,7 @@ def usage() {
     println("pcm.nf --in <fasta_file> --out <output_dir> --cpus <nb_cpus> -w <temp_work_dir>")
     println("--in Multifasta file containing protein sequence (default ${params.in}).")
     println("--out Output directory (default ${params.out}). ")
+    println("--candidates Table providing a set of family and sequence to test by pcm (in the tsv format: family_name\\tsequence_name)")
     println("--cpu Number of cpus for homology modeling processing (default ${params.cpu})")
     println("--cpu_candidates Number of cpus for candidates search (default ${params.cpu_candidates})")
     println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)")
