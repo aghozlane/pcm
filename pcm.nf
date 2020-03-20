@@ -12,6 +12,7 @@ workflow.onError = {
 }
 
 // General parameters
+params.candidates = ""
 params.evotarmd = "${baseDir}/bin/evotar.rmd"
 params.in = "${baseDir}/example/example_proteome.faa"
 params.out = "${baseDir}/example/res"
@@ -53,6 +54,12 @@ modDir.mkdirs()
 multifastaChannel = Channel
                 .fromPath("${params.in}")
                 .ifEmpty { exit 1, "Missing parameter: ${params.in}" }
+
+selectedChannel = Channel.fromPath("${params.candidates}")
+                     .ifEmpty { exit 1, "Cannot find candidate list file: ${params.candidates}" }
+                     .splitCsv(sep: "\t")
+                     .groupTuple()
+                     .map{it -> [it[0], it[1]] }
 
 params.help=false
 
@@ -100,78 +107,99 @@ familyChannel = Channel
                     ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"]
                     )
                  .filter{ it[0] in tab}
+if (params.candidates){
+    // index
+    process extract_candidates {
+        tag "${hits[0]}"
+        
+        input:
+        set fam, sequence from selectedChannel
+        file(fasta) from multifastaChannel
 
-// index
-process index_query {
-    tag "${fasta.baseName}"
-    
-    if(params.modelling_quality == "fast"){
-        cpus params.cpu_candidates
+        output:
+        set fam,  file("splitted/*.fasta") from fastaChannel mode flatten
+
+        shell:
+        """
+        mkdir extraction
+        grab_catalogue_sequence.py -i !{sequence} -d !{fasta} -o extraction/!{sequence}.fasta
+        """
     }
-    
-    input:
-    file(fasta) from multifastaChannel
-
-    output:
-    set file(fasta), file("*") into multifastaindexedChannel
-
-    shell:
-    """
-    if [ "!{params.modelling_quality}"  ==  "fast" ]
-    then
-        mmseqs createdb !{fasta} targetDB
-        mmseqs createindex  targetDB tmp --threads !{params.cpu_candidates}
-        rm -rf tmp
-    else
-        makeblastdb -in !{fasta} -dbtype prot
-    fi
-    """
 }
+else{
+    // index
+    process index_query {
+        tag "${fasta.baseName}"
+        
+        if(params.modelling_quality == "fast"){
+            cpus params.cpu_candidates
+        }
+        
+        input:
+        file(fasta) from multifastaChannel
 
-process search_distant_homologuous {
-    tag "${fam[0]}"
-    publishDir "$myDir/candidates/", mode: 'copy'
-    cpus params.cpu_candidates
+        output:
+        set file(fasta), file("*") into multifastaindexedChannel
 
-    input:
-    set file(fasta), file(index) from multifastaindexedChannel
-    each fam from familyChannel
+        shell:
+        """
+        if [ "!{params.modelling_quality}"  ==  "fast" ]
+        then
+            mmseqs createdb !{fasta} targetDB
+            mmseqs createindex  targetDB tmp --threads !{params.cpu_candidates}
+            rm -rf tmp
+        else
+            makeblastdb -in !{fasta} -dbtype prot
+        fi
+        """
+    }
 
-    output:
-    set val("${fam[0]}"), file("*_candidates/*.fasta") optional true into candidatesChannel
-    file("*_candidates/*.tsv") optional true into summaryChannel
 
-    shell:
-    """
-    mkdir !{fam[0]}_candidates/ tmp
-    if [ "!{params.modelling_quality}"  ==  "fast" ]
-    then
-        hfinder.py -q !{fam[3]} -d !{fasta} -db targetDB  -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract fastcheck -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
-    else
-        hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
-    fi
-    if [ -f "!{fam[0]}_candidates/all_protein_homology.fasta" ]
-    then
-        mv !{fam[0]}_candidates/all_protein_homology.fasta !{fam[0]}_candidates/!{fam[0]}_candidates.fasta
-        mv !{fam[0]}_candidates/all_hit_length.tsv !{fam[0]}_candidates/!{fam[0]}_candidates_hit_length.tsv
-        mv !{fam[0]}_candidates/all_hit_properties.tsv !{fam[0]}_candidates/!{fam[0]}_candidates_hit_properties.tsv
-    fi
-    """
-}
+    process search_distant_homologuous {
+        tag "${fam[0]}"
+        publishDir "$myDir/candidates/", mode: 'copy'
+        cpus params.cpu_candidates
 
-process fastaExtract {
-    tag "${fasta}"
+        input:
+        set file(fasta), file(index) from multifastaindexedChannel
+        each fam from familyChannel
 
-    input:
-    set fam, file(fasta) from candidatesChannel
+        output:
+        set val("${fam[0]}"), file("*_candidates/*.fasta") optional true into candidatesChannel
+        file("*_candidates/*.tsv") optional true into summaryChannel
 
-    output:
-    set fam, file("splitted/*.fasta") into fastaChannel mode flatten
+        shell:
+        """
+        mkdir !{fam[0]}_candidates/ tmp
+        if [ "!{params.modelling_quality}"  ==  "fast" ]
+        then
+            hfinder.py -q !{fam[3]} -d !{fasta} -db targetDB  -tmp tmp -s mmseqs -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract fastcheck -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+        else
+            hfinder.py -q !{fam[3]} -qm !{fam[4]} -d ${fasta} -s blastp hmmsearch ssearch -e !{params.hfinder_evalue} -lmin !{fam[1]} -lmax !{fam[2]} -b extract cumulative check -r !{fam[0]}_candidates/ -n 1 -t !{params.cpu_candidates}
+        fi
+        if [ -f "!{fam[0]}_candidates/all_protein_homology.fasta" ]
+        then
+            mv !{fam[0]}_candidates/all_protein_homology.fasta !{fam[0]}_candidates/!{fam[0]}_candidates.fasta
+            mv !{fam[0]}_candidates/all_hit_length.tsv !{fam[0]}_candidates/!{fam[0]}_candidates_hit_length.tsv
+            mv !{fam[0]}_candidates/all_hit_properties.tsv !{fam[0]}_candidates/!{fam[0]}_candidates_hit_properties.tsv
+        fi
+        """
+    }
 
-    shell:
-    """
-    extract_sequence.py !{fasta} splitted/
-    """
+    process fastaExtract {
+        tag "${fasta}"
+
+        input:
+        set fam, file(fasta) from candidatesChannel
+
+        output:
+        set fam, file("splitted/*.fasta") into fastaChannel mode flatten
+
+        shell:
+        """
+        extract_sequence.py !{fasta} splitted/
+        """
+    }
 }
 
 process homology_modelling {
