@@ -55,12 +55,6 @@ multifastaChannel = Channel
                 .fromPath("${params.in}")
                 .ifEmpty { exit 1, "Missing parameter: ${params.in}" }
 
-selectedChannel = Channel.fromPath("${params.candidates}")
-                     .ifEmpty { exit 1, "Cannot find candidate list file: ${params.candidates}" }
-                     .splitCsv(sep: "\t")
-                     .groupTuple()
-                     .map{it -> [it[0], it[1]] }
-
 params.help=false
 
 def usage() {
@@ -109,16 +103,20 @@ familyChannel = Channel
                     )
                  .filter{ it[0] in tab}
 if (params.candidates){
+    selectedChannel = Channel.fromPath("${params.candidates}")
+                     .ifEmpty { exit 1, "Cannot find candidate list file: ${params.candidates}" }
+                     .splitCsv(sep: "\t")
+                     .map{it -> [it[0], it[1]] }
     // index
     process extract_candidates {
-        tag "${hits[0]}"
+        tag "${sequence}"
         
         input:
         set fam, sequence from selectedChannel
         file(fasta) from multifastaChannel
 
         output:
-        set fam,  file("splitted/*.fasta") from fastaChannel mode flatten
+        set fam,  file("extraction/*.fasta") into fastaChannel mode flatten
 
         shell:
         """
