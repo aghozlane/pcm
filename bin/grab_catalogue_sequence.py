@@ -199,7 +199,7 @@ def main():
             list_sequences = args.set_sequences.sort()
         elif args.list_sequences:
             if args.list_sequences.startswith("[") and args.list_sequences.endswith("]"):
-                args.list_sequences = args.list_sequences.replace("[", "").replace("]", "")
+                args.list_sequences = args.list_sequences.replace("[", "").replace("]", "").replace(" ", "")
                 list_sequences = args.list_sequences.split(",")
             else:
                 sys.exit("The list should be in the format [name1,name2]")
