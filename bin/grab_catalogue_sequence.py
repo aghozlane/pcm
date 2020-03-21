@@ -205,8 +205,7 @@ def main():
         list_sequences.sort()
         list_sequences = get_unique(list_sequences)
     except AssertionError:
-        sys.exit("Error no element detected in the file : {0}"
-                 .format(list_sequences_file))
+        sys.exit("Error no element detected in the query list")
     
     print("{0} (unique) sequences to search".format(len(list_sequences)))
     # Extract catalogue sequence

@@ -121,7 +121,7 @@ if (params.candidates){
 
         shell:
         """
-        grab_catalogue_sequence.py -s !{sequence} -d !{fasta} -o !{fam}.fasta
+        grab_catalogue_sequence.py -l !{sequence} -d !{fasta} -o !{fam}.fasta
         extract_sequence.py !{fam}.fasta splitted/
         """
     }
