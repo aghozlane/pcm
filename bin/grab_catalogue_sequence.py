@@ -71,8 +71,9 @@ def getArguments():
                                      "{0} -h".format(sys.argv[0]))
     parser.set_defaults(results=".{0}".format(os.sep))
     parser.add_argument('-i', dest='list_sequences_file', type=isfile,
-                        required=True,
                         help='List of sequence to extract.')
+    parser.add_argument('-s', dest='set_sequences', type=str, nargs='+',
+                        help="Directory that contains PDB files.")
     parser.add_argument('-d', dest='catalogue_file', type=isfile,
                         required=True, help='Database query.')
     parser.add_argument('-n', dest='not_in_database', action='store_true',
@@ -194,7 +195,12 @@ def main():
     args = getArguments()
     # Get List of sequence of interest
     print("Load the list of sequence of interest ...")
-    list_sequences = extract_interest_elements(args.list_sequences_file)
+    if args.list_sequences_file:
+        list_sequences = extract_interest_elements(args.list_sequences_file)
+    elif args.set_sequences:
+        list_sequences = args.set_sequences.sort()
+    else:
+        sys.exit("Please provide a file containing the list of query sequences or a set of sequences")
     print("{0} (unique) sequences to search".format(len(list_sequences)))
     # Extract catalogue sequence
     print("Extract sequences from the catalogue...")

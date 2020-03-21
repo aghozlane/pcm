@@ -106,22 +106,23 @@ if (params.candidates){
     selectedChannel = Channel.fromPath("${params.candidates}")
                      .ifEmpty { exit 1, "Cannot find candidate list file: ${params.candidates}" }
                      .splitCsv(sep: "\t")
+                     .groupTuple()
                      .map{it -> [it[0], it[1]] }
     // index
     process extract_candidates {
-        tag "${sequence}"
+        tag "${fam}"
         
         input:
         set fam, sequence from selectedChannel
         file(fasta) from multifastaChannel
 
         output:
-        set fam,  file("extraction/*.fasta") into fastaChannel mode flatten
+        set fam,  file("splitted/*.fasta") into fastaChannel mode flatten
 
         shell:
         """
-        mkdir extraction
-        grab_catalogue_sequence.py -i !{sequence} -d !{fasta} -o extraction/!{sequence}.fasta
+        grab_catalogue_sequence.py -s !{sequence[0]} -d !{fasta} -o !{fam}.fasta
+        extract_sequence.py !{fam}.fasta splitted/
         """
     }
 }
