@@ -71,7 +71,9 @@ def getArguments():
                                      "{0} -h".format(sys.argv[0]))
     parser.set_defaults(results=".{0}".format(os.sep))
     parser.add_argument('-i', dest='list_sequences_file', type=isfile,
-                        help='List of sequence to extract.')
+                        help='List of sequence to extract (in a file).')
+    parser.add_argument('-l', dest='list_sequences', type=list,
+                        help='List of sequence to extract (in a file).')
     parser.add_argument('-s', dest='set_sequences', type=str, nargs='+',
                         help="Directory that contains PDB files.")
     parser.add_argument('-d', dest='catalogue_file', type=isfile,
@@ -95,14 +97,9 @@ def extract_interest_elements(list_sequences_file):
             list_sequences_reader = csv.reader(list_seq, delimiter="\t")
             for line in list_sequences_reader:
                  list_sequences.append(line[0])
-            assert(list_sequences > 0)
-            list_sequences.sort()
     except IOError:
         sys.exit("Error cannot the file : {0}".format(list_sequences_file))
-    except AssertionError:
-        sys.exit("Error no element detected in the file : {0}"
-                 .format(list_sequences_file))
-    return get_unique(list_sequences)
+    return list_sequences
 
 
 # def is_selected(header, list_sequences):
@@ -195,12 +192,22 @@ def main():
     args = getArguments()
     # Get List of sequence of interest
     print("Load the list of sequence of interest ...")
-    if args.list_sequences_file:
-        list_sequences = extract_interest_elements(args.list_sequences_file)
-    elif args.set_sequences:
-        list_sequences = args.set_sequences.sort()
-    else:
-        sys.exit("Please provide a file containing the list of query sequences or a set of sequences")
+    try:
+        if args.list_sequences_file:
+            list_sequences = extract_interest_elements(args.list_sequences_file)
+        elif args.set_sequences:
+            list_sequences = args.set_sequences.sort()
+        elif args.list_sequences:
+            list_sequences = args.list_sequences.sort()
+        else:
+            sys.exit("Please provide a file containing the list of query sequences or a set of sequences")
+        assert(list_sequences > 0)
+        list_sequences.sort()
+        list_sequences = get_unique(list_sequences)
+    except AssertionError:
+        sys.exit("Error no element detected in the file : {0}"
+                 .format(list_sequences_file))
+    
     print("{0} (unique) sequences to search".format(len(list_sequences)))
     # Extract catalogue sequence
     print("Extract sequences from the catalogue...")
