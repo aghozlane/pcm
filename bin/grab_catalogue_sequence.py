@@ -72,7 +72,7 @@ def getArguments():
     parser.set_defaults(results=".{0}".format(os.sep))
     parser.add_argument('-i', dest='list_sequences_file', type=isfile,
                         help='List of sequence to extract (in a file).')
-    parser.add_argument('-l', dest='list_sequences', type=list,
+    parser.add_argument('-l', dest='list_sequences', type=str,
                         help='List of sequence to extract (in a file).')
     parser.add_argument('-s', dest='set_sequences', type=str, nargs='+',
                         help="Directory that contains PDB files.")
@@ -198,7 +198,11 @@ def main():
         elif args.set_sequences:
             list_sequences = args.set_sequences.sort()
         elif args.list_sequences:
-            list_sequences = args.list_sequences.sort()
+            if args.list_sequences.startswith("[") and args.list_sequences.endswith("]"):
+                args.list_sequences = args.list_sequences.replace("[", "").replace("]", "")
+                list_sequences = args.list_sequences.split(",")
+            else:
+                sys.exit("The list should be in the format [name1,name2]")
         else:
             sys.exit("Please provide a file containing the list of query sequences or a set of sequences")
         assert(list_sequences > 0)
