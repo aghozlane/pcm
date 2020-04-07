@@ -73,9 +73,9 @@ def getArguments():
     parser.add_argument('-i', dest='list_sequences_file', type=isfile,
                         help='List of sequence to extract (in a file).')
     parser.add_argument('-l', dest='list_sequences', type=str,
-                        help='List of sequence to extract (in a file).')
+                        help='List of sequence to extract in the format -l [seq1, seq2].')
     parser.add_argument('-s', dest='set_sequences', type=str, nargs='+',
-                        help="Directory that contains PDB files.")
+                        help="List of sequence to extract in the format -s seq1, seq2.")
     parser.add_argument('-d', dest='catalogue_file', type=isfile,
                         required=True, help='Database query.')
     parser.add_argument('-n', dest='not_in_database', action='store_true',

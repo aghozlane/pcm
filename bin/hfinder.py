@@ -117,7 +117,7 @@ class Inconfig:
                         "%hmm_db %query > log_hmmscan.txt")
         self.config.set('Homology_config', 'mmseqs', "%path_softmmseqs "
                         "easy-search %query %database %output %temporary --threads %proc "
-                        " --search-type 1 --format-output query,target,taln,qaln")
+                        " --search-type 1 --format-output query,target,taln,qaln -s 7")
         self.config.add_section('Alignment_config')
         self.config.set('Alignment_config', 'clustalo',
                         "%path_softclustalo -i %multifasta -o %output "
