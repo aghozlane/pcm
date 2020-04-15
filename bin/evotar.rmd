@@ -141,7 +141,8 @@ colnames(prediction)[8] = "Prediction"
 prediction[,c(3,4,5,6)] = round(prediction[,c(3,4,5,6)], 3)
 write.table(prediction, file = predout, sep ="\t")
 
-DT::datatable(prediction,options = list(pageLength=50, scrollX='400px'))
+DT::datatable(prediction,options = list(pageLength=50, scrollX='400px', dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')), extensions = c('Buttons'))
 ```
 
 We represent the two first principal components of the new data, colored by their predicted class.

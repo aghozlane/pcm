@@ -1650,6 +1650,8 @@ def save_picture(urlfile, output_file):
 def run_proq(website_path, pred, pdb):
     """Run ProQ
     """
+    maxsub = 0.0
+    lgscore = 0.0
     # Set PDB file
     try:
         with open(pdb, 'rt') as pdb_sent:

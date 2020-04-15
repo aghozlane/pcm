@@ -110,19 +110,21 @@ if (params.candidates){
                      .map{it -> [it[0], it[1]] }
     // index
     process extract_candidates {
-        tag "${fam}"
+        tag "${fam[0]}"
         
         input:
-        set fam, sequence from selectedChannel
+        each fam from selectedChannel
         file(fasta) from multifastaChannel
 
         output:
-        set fam,  file("splitted/*.fasta") into fastaChannel mode flatten
+        set val("${fam[0]}"),  file("splitted/*.fasta") into fastaChannel mode flatten
 
-        shell:
+        script:
+        File newFile = new File("${workflow.workDir}/${fam[0]}.txt")
+        newFile.withWriter{ out -> fam[1].each {out.println it} }
         """
-        grab_catalogue_sequence.py -l "!{sequence}" -d !{fasta} -o !{fam}.fasta
-        extract_sequence.py !{fam}.fasta splitted/
+        grab_catalogue_sequence.py -i ${workflow.workDir}/${fam[0]}.txt -d ${fasta} -o ${fam[0]}.fasta
+        extract_sequence.py ${fam[0]}.fasta splitted/
         """
     }
 }
