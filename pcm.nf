@@ -64,7 +64,7 @@ def usage() {
     println("--candidates Table providing a set of family and sequence to test by pcm (in the tsv format: family_name\\tsequence_name)")
     println("--cpu Number of cpus for homology modeling processing (default ${params.cpu})")
     println("--cpu_candidates Number of cpus for candidates search (default ${params.cpu_candidates})")
-    println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van)")
+    println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van, serpin)")
     println("--hfinder_evalue E-value threshold to search candidates (default ${params.hfinder_evalue})")
     println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
     println("--model Number of model calculated (default ${params.model})")
@@ -99,7 +99,8 @@ familyChannel = Channel
                     ["sul", "209", "349","${params.database}/sul/sul_ref.faa","${params.database}/sul/sul.hmm"],
                     ["tetM", "475", "791","${params.database}/tetM/tetM_ref.faa","${params.database}/tetM/tetM.hmm"],
                     ["tetX", "287", "478","${params.database}/tetX/tetX_ref.faa","${params.database}/tetX/tetX.hmm"],
-                    ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"]
+                    ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"],
+                    ["serpin", "337", "563","${params.database}/serpin/serpin_ref.faa", "${params.database}/serpin/serpin_ref.hmm"]
                     )
                  .filter{ it[0] in tab}
 if (params.candidates){
