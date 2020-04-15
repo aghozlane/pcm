@@ -1840,8 +1840,12 @@ def parse_proq(proq_result):
     except ValueError:
         sys.exit("Bad casting with line : {0}".format(line))
     except AssertionError:
-        sys.exit("The program has failed to parse proq result:"
-                 "{0}".format(proq_result))
+        print("The program has failed to parse proq result:"
+                 "{0}".format(proq_result), file=sys.stderr)
+    if lgscore == "":
+	lgscore = 0.0
+    if maxsub == "":
+	maxsub = 0.0
     return [maxsub, lgscore]
 
 

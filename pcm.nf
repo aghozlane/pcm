@@ -120,10 +120,11 @@ if (params.candidates){
         set val("${fam[0]}"),  file("splitted/*.fasta") into fastaChannel mode flatten
 
         script:
-        File newFile = new File("${workflow.workDir}/${fam[0]}.txt")
-        newFile.withWriter{ out -> fam[1].each {out.println it} }
+        //File newFile = new File("${workflow.workDir}/${fam[0]}.txt")
+        //newFile.withWriter{ out -> fam[1].each {out.println it} }
         """
-        grab_catalogue_sequence.py -i ${workflow.workDir}/${fam[0]}.txt -d ${fasta} -o ${fam[0]}.fasta
+        #grab_catalogue_sequence.py -i ${workflow.workDir}/${fam[0]}.txt -d ${fasta} -o ${fam[0]}.fasta
+        grab_catalogue_sequence.py -l "${fam[1]}" -d ${fasta} -o ${fam[0]}.fasta
         extract_sequence.py ${fam[0]}.fasta splitted/
         """
     }
@@ -210,7 +211,7 @@ process homology_modelling {
     cpus params.cpu
     label 'modelling'
     validExitStatus 0,3
-    errorStrategy 'retry'
+    errorStrategy 'finish'
 
     input:
     set fam, file(fasta) from fastaChannel
@@ -255,6 +256,7 @@ process prosa_check {
      publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow', pattern: "*/*/result_prosa_*"
      label 'modelling'
      errorStrategy 'retry'
+     maxRetries 10
 
      input:
      set val(fam), file(fasta), horiz_ref, best_pdb_ref, proq_ref, mypmfs_ref, summary_ref, horiz_tneg, best_pdb_tneg, proq_tneg, mypmfs_tneg, summary_tneg from modelChannel
