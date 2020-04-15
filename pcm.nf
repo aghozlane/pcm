@@ -317,6 +317,8 @@ process structural_alignment {
     tag "${fasta.baseName}:${fam}"
     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copyNoFollow', pattern: '*/struct_matrix_*.tsv'
     cpus params.cpu
+    errorStrategy 'retry'
+    maxRetries 10
 
     input:
     set val(fam), file(fasta), best_pdb_ref, best_pdb_tneg from structuralAlignmentChannel
