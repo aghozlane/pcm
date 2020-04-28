@@ -98,19 +98,18 @@ def differential(ref, neg):
     print(len(ref))
     for i in xrange(len(ref)):
         #ugly
-	refval = None
+        refval = None
         negval = None
         if ref[i] == "" and neg[i] == "":
             res += [0.0]
         elif neg[i] == "":
-            negval = 0.
-	elif ref[i] == "":
+            negval = 0.0
+        elif ref[i] == "":
             refval = 0.0
-	else:
-	    refval = float(ref[i])
-            negval = float(neg[i])
+        refval = float(ref[i])
+        negval = float(neg[i])
         if refval and negval:
-  	    if isnan(negval) and isnan(refval):
+            if isnan(negval) and isnan(refval):
                 res += [0]
             elif isnan(negval):
                 res += [refval]
