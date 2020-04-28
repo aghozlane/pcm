@@ -212,7 +212,6 @@ process homology_modelling {
     publishDir "$myDir/modelling/${fam}_candidates/", mode: 'copy'
     cpus params.cpu
     label 'modelling'
-    validExitStatus 0,3
     errorStrategy 'finish'
 
     input:
@@ -248,7 +247,8 @@ process homology_modelling {
     then
         cp tneg/!{fasta.baseName}//\$(sed -n 2p \$summary_tneg |cut -f 1) best_model_tneg/
     else
-        echo "\$summary_tneg file is missing"
+        echo "No negative simulation were obtained, we create empty files for nextflow"
+        touch tneg/!{fasta.baseName}/empty_neg.horiz best_model_tneg/empty_neg.pdb tneg/!{fasta.baseName}/result_mypmfs_empty_neg.csv tneg/!{fasta.baseName}/modeller_summary_empty_neg.csv
     fi
     """
 }
@@ -271,7 +271,12 @@ process prosa_check {
      """
      mkdir -p ref/!{fasta.baseName}/ tneg/!{fasta.baseName}/
      modeller_script_singularity.py -s prosa -l check -sm !{summary_ref} -d !{horiz_ref}
-     modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz_tneg}
+     if [ !{horiz_tneg} != "empty_neg.horiz" ]
+     then
+        modeller_script_singularity.py -s prosa -l check -sm !{summary_tneg} -d !{horiz_tneg}
+     else
+        touch tneg/!{fasta.baseName}/result_prosa_empty_neg.csv
+     fi
      cp \$(dirname !{summary_ref})/result_prosa_* ref/!{fasta.baseName}/
      cp \$(dirname !{summary_tneg})/result_prosa_* tneg/!{fasta.baseName}/
      """
@@ -301,6 +306,8 @@ process extract_result {
      pseudo_energy_ref=\$(tail -n +2 !{mypmfs_ref} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g')
      echo -e "\$best_model_ref\t!{fam}\t\$molpdf_ref\t\$dope_ref\t\$normalized_dope_ref\t\$GA341_score_ref\t\$zscore_ref\t\$maxsub_ref\t\$lgscore_ref\t\$pseudo_energy_ref" > res_ref_summary.tsv
      # Negative
+     if [ !{summary_tneg} != "tneg/!{fasta.baseName}/modeller_summary_empty_neg.csv" ]
+     then
      best_model_tneg=\$(tail -n +2 !{summary_tneg} |head -1 |cut -s -f1|sed -e  "s/\\r//g"|sed "s/.pdb//g")
      dope_tneg=\$(tail -n +2 !{summary_tneg} |head -1 |cut -s -f3|sed -e  's/\\r//g')
      molpdf_tneg=\$(tail -n +2 !{summary_tneg} |head -1 |cut -s -f2|sed -e  's/\\r//g')
@@ -311,6 +318,9 @@ process extract_result {
      lgscore_tneg=\$(tail -n +2 !{proq_tneg} |head -1 |awk '{print \$3}'| sed -e  's/\\r//g')
      pseudo_energy_tneg=\$(tail -n +2 !{mypmfs_tneg} |head -1 |awk '{print \$2}'| sed -e  's/\\r//g')
      echo -e "\$best_model_tneg\t!{fam}\t\$molpdf_tneg\t\$dope_tneg\t\$normalized_dope_tneg\t\$GA341_score_tneg\t\$zscore_tneg\t\$maxsub_tneg\t\$lgscore_tneg\t\$pseudo_energy_tneg" > res_tneg_summary.tsv
+     else
+     echo -e "\$best_model_tneg\t!{fam}\t0.0\t0.0\t0.0\t0.0\t0.0\t0.0\t0.0\t0.0" > res_tneg_summary.tsv
+     fi
      """
 }
 
@@ -400,8 +410,8 @@ process lineartest {
 #!/usr/bin/env Rscript
 library(rmarkdown)
 #x <- read.csv2("!{params.universal_model}")[,c(3:4,6:13)]
-x <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
-y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2]
+x <- read.csv2(]"!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
+y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2
 pcm <- read.delim("!{matrix}")
 predout <- paste0(getwd(), "/prediction_output.tsv")
 rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout), 

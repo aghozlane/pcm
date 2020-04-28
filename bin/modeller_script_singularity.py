@@ -427,7 +427,7 @@ def extract_elements(template_search_file, regex_text, order):
     except AssertionError:
         print("No template have been identified in "
                  "{0}".format(template_search_file), file=sys.stderr)
-        sys.exit(3)
+        sys.exit(0)
     return elements
 
 
