@@ -101,13 +101,15 @@ def differential(ref, neg):
         refval = None
         negval = None
         if ref[i] == "" and neg[i] == "":
-            res += [0.0]
+            negval = 0.0
+            refval = 0.0
         elif neg[i] == "":
             negval = 0.0
         elif ref[i] == "":
             refval = 0.0
-        refval = float(ref[i])
-        negval = float(neg[i])
+        else:
+            refval = float(ref[i])
+            negval = float(neg[i])
         if refval and negval:
             if isnan(negval) and isnan(refval):
                 res += [0]
