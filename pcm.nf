@@ -100,7 +100,8 @@ familyChannel = Channel
                     ["tetM", "475", "791","${params.database}/tetM/tetM_ref.faa","${params.database}/tetM/tetM.hmm"],
                     ["tetX", "287", "478","${params.database}/tetX/tetX_ref.faa","${params.database}/tetX/tetX.hmm"],
                     ["van", "260", "433","${params.database}/van/van_ref.faa","${params.database}/van/van.hmm"],
-                    ["serpin", "337", "563","${params.database}/serpin/serpin_ref.faa", "${params.database}/serpin/serpin_ref.hmm"]
+                    ["serpin", "337", "563","${params.database}/serpin/serpin_ref.faa", "${params.database}/serpin/serpin_ref.hmm"],
+		    ["lytr", "75", "125","${params.database}/lytr/lytr_ref.faa", "${params.database}/lytr/lytr_ref.hmm"]
                     )
                  .filter{ it[0] in tab}
 if (params.candidates){

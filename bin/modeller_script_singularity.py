@@ -1677,6 +1677,10 @@ def run_proq(website_path, pred, pdb):
             sys.exit("No data received from ProQ")
     except ValueError:
         sys.exit("Something went wrong with {0}".format(pdb))
+    if maxsub == "":
+	maxsub = 0.0
+    if lgscore == "":
+        lgscore = 0.0
     return [pdb, maxsub, lgscore]
 
 

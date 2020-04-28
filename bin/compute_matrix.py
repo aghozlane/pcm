@@ -94,17 +94,30 @@ def differential(ref, neg):
     """
     assert(len(ref) == len(neg))
     res = []
+    print(ref)
+    print(len(ref))
     for i in xrange(len(ref)):
-        refval = float(ref[i])
-        negval = float(neg[i])
-        if isnan(negval) and isnan(refval):
-            res += [0]
-        elif isnan(negval):
-            res += [refval]
-        elif isnan(refval):
-            res += [negval]
-        else:
-            res += [refval - negval]
+        #ugly
+	refval = None
+        negval = None
+        if ref[i] == "" and neg[i] == "":
+            res += [0.0]
+        elif neg[i] == "":
+            negval = 0.
+	elif ref[i] == "":
+            refval = 0.0
+	else:
+	    refval = float(ref[i])
+            negval = float(neg[i])
+        if refval and negval:
+  	    if isnan(negval) and isnan(refval):
+                res += [0]
+            elif isnan(negval):
+                res += [refval]
+            elif isnan(refval):
+                res += [negval]
+            else:
+                res += [refval - negval]
     return res
 
 def write_result(gene_res, name, output_file):
@@ -176,8 +189,9 @@ def write_result(gene_res, name, output_file):
                 #print(gene_res[gene]["quality_ref"])
                 #print(gene_res[gene]["quality_neg"])
                 #print("quality")
-                #print(gene)
-                #print(gene_res[gene]["quality_ref"])
+                print(gene)
+                print(gene_res[gene]["quality_ref"])
+                print(gene_res[gene]["quality_neg"])
                 diff_quality = differential(gene_res[gene]["quality_ref"],
                                             gene_res[gene]["quality_neg"])
                 #print("mammoth")
