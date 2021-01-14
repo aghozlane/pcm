@@ -66,7 +66,7 @@ def usage() {
     println("--cpu_candidates Number of cpus for candidates search (default ${params.cpu_candidates})")
     println("--family Select the family to consider (default aac2,aac3_1,aac3_2,aac6,ant,aph,arnm,blaa,blab1,blab3,blac,blad,dfra,erm,fos,ldt,mcr,qnr,sul,tetM,tetX,van, serpin)")
     println("--hfinder_evalue E-value threshold to search candidates (default ${params.hfinder_evalue})")
-    println("--modelling_quality Level of quality of the homology modelling fast, normal or high (default ${params.modelling_quality})")
+    println("--modelling_quality Level of quality of the homology modelling fast, normal or max (default ${params.modelling_quality})")
     println("--model Number of model calculated (default ${params.model})")
     println("--template Number of template for modelling (default ${params.template})")
 }
@@ -104,6 +104,21 @@ familyChannel = Channel
 		    ["lytr", "75", "125","${params.database}/lytr/lytr_ref.faa", "${params.database}/lytr/lytr_ref.hmm"]
                     )
                  .filter{ it[0] in tab}
+
+process extract_candidates {
+    input:
+    file(fasta) from multifastaChannel
+
+    output:
+    file("conv_name.fasta") into multifastaconvChannel
+    file("association.tsv") into assoconvChannel
+
+    script:
+    """
+    convert_names.py -i ${fasta} -o conv_name.fasta -a association.tsv
+    """
+}
+
 if (params.candidates){
     selectedChannel = Channel.fromPath("${params.candidates}")
                      .ifEmpty { exit 1, "Cannot find candidate list file: ${params.candidates}" }
@@ -116,7 +131,7 @@ if (params.candidates){
         
         input:
         each fam from selectedChannel
-        file(fasta) from multifastaChannel
+        file(fasta) from multifastaconvChannel
 
         output:
         set val("${fam[0]}"),  file("splitted/*.fasta") into fastaChannel mode flatten
@@ -141,7 +156,7 @@ else{
         }
         
         input:
-        file(fasta) from multifastaChannel
+        file(fasta) from multifastaconvChannel
 
         output:
         set file(fasta), file("*") into multifastaindexedChannel
@@ -400,6 +415,7 @@ process lineartest {
 
     input:
     file(matrix) from matrixChannel
+    file(association) from assoconvChannel
 
     output:
     file("result.html") into predhtmloutChannel
@@ -413,8 +429,9 @@ library(rmarkdown)
 x <- read.csv2(]"!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
 y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2
 pcm <- read.delim("!{matrix}")
+association <- read.delim("!{association}")
 predout <- paste0(getwd(), "/prediction_output.tsv")
-rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout), 
+rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout, association), 
                   output_format="html_document")
     """
 }
