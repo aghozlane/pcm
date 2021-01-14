@@ -113,7 +113,7 @@ ggplot(dat.imp, aes(reorder(id, mmce), mmce)) + geom_col(fill = "steelblue") + t
 
 First, an association table is given. PCM needs proper protein names.
 ```{r association}
-DT::datatable(association, options = list(pageLength=50, scrollX='400px', dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print')), extensions = c('Buttons'))
+DT::datatable(association, options = list(pageLength=10, scrollX='200px', dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print')), extensions = c('Buttons'))
 ```
 We apply the model estimated on the discovery set to your dataset. 
 

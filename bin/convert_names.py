@@ -67,11 +67,12 @@ def main():
     seq = ""
     header = ""
     with open(args.input_file, "rt") as input_file, open(args.output_file, "wt") as output_file, open(args.association_file, "wt") as association_file:
+        association_file.write("\"Code\"\t\"Name\"\n")
         for line in input_file:
             if line.startswith(">"):
                 if len(seq) > 0:
                     output_file.write(">protein{}\n{}\n".format(count_prot, fill(seq)))
-                    association_file.write("protein{}\t{}\n".format(count_prot, header))
+                    association_file.write("protein{}\t\"{}\"\n".format(count_prot, header))
                     seq = ""
                 header = line[1:].strip().replace("\n", "")
                 count_prot += 1
@@ -79,7 +80,7 @@ def main():
                 seq += line.strip().replace("\n", "")
         if len(seq) > 0:
             output_file.write(">protein{}\n{}\n".format(count_prot, fill(seq)))
-            association_file.write("protein{}\t{}\n".format(count_prot, header))
+            association_file.write("\"protein{}\"\t\"{}\"\n".format(count_prot, header))
 
 
 

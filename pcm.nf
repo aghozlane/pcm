@@ -106,6 +106,7 @@ familyChannel = Channel
                  .filter{ it[0] in tab}
 
 process convert_names {
+    publishDir "$myDir/", mode: 'copy'
     input:
     file(fasta) from multifastaChannel
 
