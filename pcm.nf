@@ -105,7 +105,7 @@ familyChannel = Channel
                     )
                  .filter{ it[0] in tab}
 
-process extract_candidates {
+process convert_names {
     input:
     file(fasta) from multifastaChannel
 
