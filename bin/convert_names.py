@@ -63,7 +63,7 @@ def main():
     Main program function
     """
     args = get_arguments()
-    count_prot = 1
+    count_prot = 0
     seq = ""
     header = ""
     with open(args.input_file, "rt") as input_file, open(args.output_file, "wt") as output_file, open(args.association_file, "wt") as association_file:
