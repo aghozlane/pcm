@@ -119,8 +119,6 @@ xnew <- (pcm[, names(x)])
 new.prd <- predict(mod, newdata = xnew)
 # Prepa
 prediction = as.data.frame(cbind(pcm[,c("Sequence", "Name", "Type", "TM.score_TMalign_ref", "TM.score_TMalign_tneg")], new.prd$data))
-
-print(association)
 quality_pred = rep("Not_a_ref", dim(prediction)[1])
 for (i in seq(1, dim(prediction)[1])){
   if (is.nan(prediction[i,4]) ||  is.nan(prediction[i,5])){

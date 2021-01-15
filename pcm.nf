@@ -431,7 +431,7 @@ x <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
 y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2]
 pcm <- read.delim("!{matrix}")
 predout <- paste0(getwd(), "/prediction_output.tsv")
-rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout, association), 
+rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout), 
                   output_format="html_document")
     """
 }
