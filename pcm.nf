@@ -400,6 +400,7 @@ process build_matrix {
     file(tmtneg) from tmalign_by_tneg_toprocess
     file(modref) from modelling_by_ref_toprocess
     file(modtneg) from modelling_by_tneg_toprocess
+    file(association) from assoconvChannel
 
     output:
     file("pcm_result.tsv") into matrixChannel
@@ -407,7 +408,7 @@ process build_matrix {
 
     shell:
     """
-    compute_matrix.py  -sr !{modref} -sn !{modtneg} -ar !{mamref} !{tmref} -an !{mamtneg} !{tmtneg} -o pcm_result.tsv
+    compute_matrix.py  -sr !{modref} -sn !{modtneg} -ar !{mamref} !{tmref} -an !{mamtneg} !{tmtneg} -n !{association} -o pcm_result.tsv
     """
 }
 
@@ -416,7 +417,6 @@ process lineartest {
 
     input:
     file(matrix) from matrixChannel
-    file(association) from assoconvChannel
 
     output:
     file("result.html") into predhtmloutChannel
@@ -430,7 +430,6 @@ library(rmarkdown)
 x <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,c(3:4,6:14)]
 y <- read.csv2("!{params.universal_model}", sep="\\t", dec = ".")[,2]
 pcm <- read.delim("!{matrix}")
-association <- read.delim("!{association}")
 predout <- paste0(getwd(), "/prediction_output.tsv")
 rmarkdown::render("!{params.evotarmd}",  output_file ="result.html", output_dir=getwd(), params=list(x,y, pcm, predout, association), 
                   output_format="html_document")

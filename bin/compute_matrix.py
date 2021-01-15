@@ -60,8 +60,7 @@ def get_arguments():
     parser.add_argument('-an', dest='alignment_neg_file', nargs='+', default=[],
                         required=True, help="Structural alignment by neg "
                         "(TMalign + Mammoth).")
-    parser.add_argument('-n', dest="name", type=str, default="ard",
-                        help="Family name")
+    parser.add_argument('-n', dest="name_file", type=str, help="Association name")
     parser.add_argument('-o', dest='output_file', type=str,
                         default="pcm_result.tsv", help="Output file.")
     return parser.parse_args()
@@ -112,13 +111,26 @@ def differential(ref, neg):
             res += [refval - negval]
     return res
 
-def write_result(gene_res, name, output_file):
+def load_assocation(name_file):
+    association_dict = {} 
+    try:
+        with open(name_file, "rt") as name:
+            name_reader = csv.reader(name, delimiter="\t")
+            # pass header
+            name_reader.next()
+            for line in name_reader:
+                association_dict[line[0]] = line[1]
+    except IOError:
+        sys.exit("Error cannot open {}".format(name_file))
+    return association_dict
+
+def write_result(gene_res, association_dict, output_file):
     """
     """
     try:
         with open(output_file, "wt") as output:
             output_writer = csv.writer(output, delimiter="\t")
-            output_writer.writerow(["Sequence", "Type", "pdb_id_ref",
+            output_writer.writerow(["Sequence", "Name", "Type", "pdb_id_ref",
                                     "pdb_id_tneg", "d_molpdf",
                                     "d_dope_score", "d_normalized_dope",
                                     "d_GA341_score", "d_zscore", "d_maxsub",
@@ -192,7 +204,7 @@ def write_result(gene_res, name, output_file):
                 #print("tmalign")
                 diff_TMalign = differential(gene_res[gene]["alignment_ref_TMalign"][1:],
                                             gene_res[gene]["alignment_neg_TMalign"][1:])
-                output_writer.writerow([gene[0], "Candidate_" + gene[1],
+                output_writer.writerow([gene[0], association_dict[gene[0]],"Candidate_" + gene[1],
                                         gene_res[gene]["pdb_id_quality_ref"],
                                         gene_res[gene]["pdb_id_quality_neg"]] +
                                        diff_quality + diff_mammoth +
@@ -225,8 +237,8 @@ def main():
         soft = os.path.basename(data_file).split("_")[0]
         gene_res = load_data(gene_res, data_file, "alignment_{0}_{1}"
                              .format(tag_type[i], soft))
-        #print(gene_res)
-    write_result(gene_res, args.name, args.output_file)
+    association_dict = load_assocation(args.name_file)
+    write_result(gene_res, association_dict, args.output_file)
 
 if __name__ == '__main__':
     main()
