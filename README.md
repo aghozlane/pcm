@@ -46,7 +46,7 @@ sudo make install
 It is recommanded to install singularity as root. NEWUSER namespace runtime error can occur on Red Hat system when singularity is installed by an user (see  https://github.com/sylabs/singularity/issues/415).
 Download PCM singularity image (warning: the file is heavy ~ 1Go):
 ```
-wget ftp://shiny01.hosting.pasteur.fr/pub/pcm_202002.img
+wget https://zenodo.org/record/7432803/files/pcm_202010.img
 ```
 Install nextflow:
 ```
