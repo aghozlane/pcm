@@ -68,11 +68,6 @@ nextflow pcm.nf --help
 # Run example calculation
 nextflow pcm.nf  --in example/example_proteome.faa --out result -w work/ -with-singularity pcm_202002.img
 ```
-You can analyze multiple files as follow:
-```
-# Do not run
-nextflow pcm.nf  --in '*.faa' --out result -w work/ -with-singularity pcm_202002.img
-```
 
 ### Command line options
 
